@@ -1,0 +1,16 @@
+# --- Obsidian system files ---
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache/
+.obsidian/indexed-db/
+.obsidian/plugins/obsidian-git/data.json
+
+# ---OS files ---
+$RECYCLE.BIN/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# --- script-generated temporary files ---
+*.log
+tmp/
