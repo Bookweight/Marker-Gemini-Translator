@@ -1,0 +1,2 @@
+This is a simple test.
+Rethinking the Generation and Selection for Efficient and Robust Point Cloud Registration.

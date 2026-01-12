@@ -1,0 +1,6 @@
+/* Disable inverted PDF colors in Obsidian dark mode */
+.theme-dark .pdf-embed iframe,
+.theme-dark .workspace-leaf-content[data-type="pdf"] iframe,
+.theme-dark .pdf-viewer {
+  filter: invert(0) !important;
+}
