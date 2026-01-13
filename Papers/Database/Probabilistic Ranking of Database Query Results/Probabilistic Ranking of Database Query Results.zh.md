@@ -1,3 +1,12 @@
+---
+title: "Probabilistic Ranking of Database Query Results"
+field: "Database"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Probabilistic Ranking of Database Query Results.pdf]]"
+tags: [paper, Database]
+---
+
 
 ## **Published in:** Proceedings of the 30th VLDB Conference, 2004
 

@@ -1,3 +1,12 @@
+---
+title: "A_Novel_Shadow_Variable_Catcher_for_Addressing_Selection_Bias_in_Recommendation_Systems"
+field: "recommendation system"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[A_Novel_Shadow_Variable_Catcher_for_Addressing_Selection_Bias_in_Recommendation_Systems.pdf]]"
+tags: [paper, recommendation system]
+---
+
 #Translated_paper
 ## **Published in:** 2024 IEEE International Conference on Data Mining (ICDM), 2024
 

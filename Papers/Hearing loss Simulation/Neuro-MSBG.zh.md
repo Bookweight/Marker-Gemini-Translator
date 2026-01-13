@@ -1,3 +1,12 @@
+---
+title: "Neuro-MSBG"
+field: "Papers"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Neuro-MSBG.pdf]]"
+tags: [paper, Papers]
+---
+
 # Neuro-MSBG: An End-to-End Neural Model for Hearing Loss Simulation
 # Neuro-MSBG：一種用於聽力損失模擬的端到端神經模型
 

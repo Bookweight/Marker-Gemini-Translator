@@ -1,3 +1,12 @@
+---
+title: "Automated_Ranking_of_Database_Query_Results"
+field: "Database"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Automated_Ranking_of_Database_Query_Results.pdf]]"
+tags: [paper, Database]
+---
+
 
 # Automated Ranking of Database Query Results
 

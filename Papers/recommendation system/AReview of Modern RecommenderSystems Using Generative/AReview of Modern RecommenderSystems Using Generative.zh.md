@@ -1,3 +1,14 @@
+---
+title: AReview of Modern RecommenderSystems Using Generative
+field: recommendation system
+status: Imported
+created_date: 2026-01-12
+pdf_link: "[[AReview of Modern RecommenderSystems Using Generative.pdf]]"
+tags:
+  - paper
+  - Recommend_System
+---
+
 
 # 現代推薦系統使用生成模型之綜述 (Gen-RecSys)
 

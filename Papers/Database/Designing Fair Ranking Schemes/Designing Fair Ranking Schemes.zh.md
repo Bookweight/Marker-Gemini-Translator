@@ -1,3 +1,12 @@
+---
+title: "Designing Fair Ranking Schemes"
+field: "Database"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Designing Fair Ranking Schemes.pdf]]"
+tags: [paper, Database]
+---
+
 
 ## SIGMOD '19, June 30-July 5, 2019, Amsterdam, Netherlands
 

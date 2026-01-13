@@ -1,3 +1,12 @@
+---
+title: "IntelliProof_An Argumentation Network-based Conversational Helper for Organized Reflection"
+field: "LLM"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[IntelliProof_An Argumentation Network-based Conversational Helper for Organized Reflection.pdf]]"
+tags: [paper, LLM]
+---
+
 #LLM
 # IntelliProof：一個基於論證網絡的對話輔助工具，用於有組織的反思
 

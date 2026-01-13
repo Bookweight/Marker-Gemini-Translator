@@ -1,3 +1,12 @@
+---
+title: "Probabilistic_Information_Retrieval_Approach_for_Ranking_of_Database_Query_Results"
+field: "Database"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Probabilistic_Information_Retrieval_Approach_for_Ranking_of_Database_Query_Results.pdf]]"
+tags: [paper, Database]
+---
+
 
 # Probabilistic Information Retrieval Approach for Ranking of Database Query Results
 # 用於資料庫查詢結果排序的機率性資訊檢索方法

@@ -1,3 +1,12 @@
+---
+title: "Continuous Autoregressive Language Models"
+field: "LLM"
+status: "Imported"
+created_date: 2026-01-12
+pdf_link: "[[Continuous Autoregressive Language Models.pdf]]"
+tags: [paper, LLM]
+---
+
 #LLM
 # 連續自回歸語言模型
 
