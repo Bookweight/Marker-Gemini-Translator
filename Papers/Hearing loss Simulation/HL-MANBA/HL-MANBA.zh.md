@@ -1,10 +1,12 @@
 ---
-title: "HL-MANBA"
-field: "Papers"
-status: "Imported"
+title: HL-MANBA
+field: Papers
+status: Imported
 created_date: 2026-01-12
 pdf_link: "[[HL-MANBA.pdf]]"
-tags: [paper, Papers]
+tags:
+  - paper
+  - hearing_loss_simulation
 ---
 
 
