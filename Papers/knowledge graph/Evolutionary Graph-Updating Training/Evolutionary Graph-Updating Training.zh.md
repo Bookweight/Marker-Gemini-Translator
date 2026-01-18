@@ -1,6 +1,6 @@
 ---
 title: Evolutionary Graph-Updating Training
-field: knowledge graph
+field: Knowledge_Graph
 status: Imported
 created_date: 2026-01-13
 pdf_link: "[[Evolutionary Graph-Updating Training.pdf]]"

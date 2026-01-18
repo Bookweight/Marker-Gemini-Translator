@@ -1,0 +1,34 @@
+# API 相關設定
+api:
+  batch_size: 50          # 每次批量請求抓 50 篇
+  sleep_seconds: 1.1      # 強制冷卻時間 (秒)
+
+# 搜尋策略設定
+search:
+  keywords: "Deep Learning"
+  year_range: "2015-2022"
+  limit: 50               # 搜尋候選池大小
+
+# 過濾器設定
+
+filters:
+  # 白名單：必須包含其中之一
+  whitelist_fields: 
+    - "Computer Science"
+  
+  # 降權名單：若包含這些，分數 * 0.6
+  blacklist_tags: 
+    - "Medicine"
+    - "Biology"
+    - "Geology"
+    - "Chemistry"
+    - "Physics"
+    - "Geography"
+  
+  # 跨領域懲罰係數 (0.6 代表只保留 60% 的分數)
+  cross_domain_penalty: 0.6
+
+obsidian:
+  vault_path: "C:/Users/User/Desktop/paper reading"
+  daily_folder: "Papers/Daily Notes"
+  unclassified_folder: "Papers/unclassified"

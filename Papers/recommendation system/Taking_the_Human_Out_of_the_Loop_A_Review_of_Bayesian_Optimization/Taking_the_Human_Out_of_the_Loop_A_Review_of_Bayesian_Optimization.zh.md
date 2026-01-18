@@ -1,10 +1,12 @@
 ---
-title: "Taking_the_Human_Out_of_the_Loop_A_Review_of_Bayesian_Optimization"
-field: "recommendation system"
-status: "Imported"
+title: Taking_the_Human_Out_of_the_Loop_A_Review_of_Bayesian_Optimization
+field: Recommendation_System
+status: Imported
 created_date: 2026-01-12
 pdf_link: "[[Taking_the_Human_Out_of_the_Loop_A_Review_of_Bayesian_Optimization.pdf]]"
-tags: [paper, recommendation system]
+tags:
+  - paper
+  - recommendation_system
 ---
 
 

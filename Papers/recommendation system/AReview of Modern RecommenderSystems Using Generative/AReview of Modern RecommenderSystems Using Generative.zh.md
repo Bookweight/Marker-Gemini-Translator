@@ -1,6 +1,6 @@
 ---
 title: AReview of Modern RecommenderSystems Using Generative
-field: recommendation system
+field: Recommendation_System
 status: Imported
 created_date: 2026-01-12
 pdf_link: "[[AReview of Modern RecommenderSystems Using Generative.pdf]]"

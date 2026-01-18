@@ -1,6 +1,6 @@
 ---
 title: TLogic
-field: knowledge graph
+field: Knowledge_Graph
 status: Imported
 created_date: 2026-01-13
 pdf_link: "[[TLogic.pdf]]"

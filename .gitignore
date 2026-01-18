@@ -13,4 +13,7 @@ Desktop.ini
 
 # --- script-generated temporary files ---
 *.log
+.env
+__pycache__/
+*.pyc
 tmp/

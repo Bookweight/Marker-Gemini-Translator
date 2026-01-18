@@ -1,10 +1,12 @@
 ---
-title: "A_Novel_Shadow_Variable_Catcher_for_Addressing_Selection_Bias_in_Recommendation_Systems"
-field: "recommendation system"
-status: "Imported"
+title: A_Novel_Shadow_Variable_Catcher_for_Addressing_Selection_Bias_in_Recommendation_Systems
+field: Recommendation_System
+status: Imported
 created_date: 2026-01-12
 pdf_link: "[[A_Novel_Shadow_Variable_Catcher_for_Addressing_Selection_Bias_in_Recommendation_Systems.pdf]]"
-tags: [paper, recommendation system]
+tags:
+  - paper
+  - recommendation_system
 ---
 
 #Translated_paper

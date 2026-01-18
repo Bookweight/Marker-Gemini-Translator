@@ -1,6 +1,6 @@
 ---
 title: A Survey on Temporal Knowledge GraphR
-field: knowledge graph
+field: Knowledge_Graph
 status: Imported
 created_date: 2026-01-13
 pdf_link: "[[A Survey on Temporal Knowledge GraphR.pdf]]"
