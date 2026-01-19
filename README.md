@@ -20,6 +20,6 @@ GROUP BY field
 
 ```dataview
 TABLE date, paper_count, status 
-FROM #daily_rec 
+FROM #daily_rec  
 SORT date DESC
 ```

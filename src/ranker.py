@@ -30,10 +30,10 @@ class PaperRanker:
         :param user_vector: 使用者偏好向量 (用於個性化加分)
         """
         if not papers:
-            self.logger.warning("📭 候選列表為空，無法進行排序")
+            self.logger.warning("候選列表為空，無法進行排序")
             return []
 
-        self.logger.info(f"⚖️ 開始排序 {len(papers)} 篇候選論文...")
+        self.logger.info(f"開始排序 {len(papers)} 篇候選論文...")
 
         # 1. 計算每篇論文的基礎分數
         scored_papers = []
@@ -74,13 +74,13 @@ class PaperRanker:
 
         # 根據分數由高到低排序
         scored_papers.sort(key=lambda x: x['final_score'], reverse=True)
-        self.logger.info(f"✅ 初步篩選後剩餘 {len(scored_papers)} 篇有效論文")
+        self.logger.info(f"初步篩選後剩餘 {len(scored_papers)} 篇有效論文")
 
         # 2. 多樣性過濾 (Diversity Enforcement)
         if len(scored_papers) > top_k * 2:
             return self._apply_diversity_filter(scored_papers, top_k)
         else:
-            self.logger.info("⚠️ 候選數量不足以進行多樣性聚類，直接回傳 Top K")
+            self.logger.info("候選數量不足以進行多樣性聚類，直接回傳 Top K")
             return scored_papers[:top_k]
 
     def _calculate_score(self, paper: Dict[str, Any]) -> tuple[float, bool]:
@@ -122,10 +122,10 @@ class PaperRanker:
                 valid_indices.append(idx)
         
         if len(embeddings) < target_k:
-            self.logger.warning("⚠️ 具有向量的論文不足，跳過多樣性過濾")
+            self.logger.warning("具有向量的論文不足，跳過多樣性過濾")
             return ranked_papers[:target_k]
 
-        self.logger.info(f"🎨 執行多樣性聚類: 從 {len(embeddings)} 篇中選出 {target_k} 類代表作")
+        self.logger.info(f"執行多樣性聚類: 從 {len(embeddings)} 篇中選出 {target_k} 類代表作")
         
         # 執行 K-Means
         kmeans = KMeans(n_clusters=target_k, random_state=42, n_init=10)

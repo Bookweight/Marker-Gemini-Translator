@@ -5,9 +5,25 @@ api:
 
 # 搜尋策略設定
 search:
-  keywords: "Deep Learning"
-  year_range: "2015-2022"
-  limit: 50               # 搜尋候選池大小
+  # 搜尋關鍵字清單
+  keywords:
+    # --- 廣泛領域 (捕捉熱門趨勢) ---
+    - "Deep Learning"
+    - "Computer Vision"
+    - "Natural Language Processing"
+    - "Computer Graphics"
+    - "Distributed Systems"
+    - "Data Mining"
+
+    # --- 特定子領域 (針對您的研究興趣) ---
+    - "Knowledge Distillation"
+    - "Time Series Anomaly Detection"
+    - "Long-term Time Series Forecasting"
+    - "Graph Neural Networks"
+
+  # 搜尋年份範圍 (建議維持近 3-5 年以確保新穎性，或依需求調整)
+  year_range: "2020-2025"
+  limit: 20               # 搜尋候選池大小
 
 # 過濾器設定
 

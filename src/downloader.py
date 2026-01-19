@@ -33,7 +33,7 @@ class PaperDownloader:
         if not papers:
             return
 
-        self.logger.info(f"📥 啟動自動下載流程: 準備處理 {len(papers)} 篇論文...")
+        self.logger.info(f"啟動自動下載流程: 準備處理 {len(papers)} 篇論文...")
         
         for paper in papers:
             title = paper.get('title', 'Untitled')
@@ -42,7 +42,7 @@ class PaperDownloader:
             url = self._get_download_url(paper)
             
             if not url:
-                self.logger.warning(f"⚠️ 跳過下載 (找不到 S2 連結或 arXiv ID): {title}")
+                self.logger.warning(f"跳過下載 (找不到 S2 連結或 arXiv ID): {title}")
                 continue
             
             try:
@@ -57,7 +57,7 @@ class PaperDownloader:
                         time.sleep(3) 
                         
             except Exception as e:
-                self.logger.error(f"❌ 處理失敗 [{title}]: {e}")
+                self.logger.error(f"處理失敗 [{title}]: {e}")
 
     def _get_download_url(self, paper: Dict[str, Any]) -> Optional[str]:
         """
@@ -77,7 +77,7 @@ class PaperDownloader:
         if arxiv_id:
             # 構建官方 PDF 連結
             arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
-            self.logger.info(f"✨ 觸發 arXiv 救援機制: {arxiv_url}")
+            self.logger.info(f"觸發 arXiv 救援機制: {arxiv_url}")
             return arxiv_url
             
         return None
@@ -92,10 +92,10 @@ class PaperDownloader:
         
         # 如果檔案已存在，跳過
         if file_path.exists():
-            self.logger.info(f"⏭️ PDF 已存在，跳過下載: {filename}")
+            self.logger.info(f"PDF 已存在，跳過下載: {filename}")
             return file_path
             
-        self.logger.info(f"⬇️ 下載中: {filename}")
+        self.logger.info(f"下載中: {filename}")
         
         try:
             # arXiv 需要類似瀏覽器的 User-Agent，否則會拒絕連線
@@ -118,16 +118,16 @@ class PaperDownloader:
     def _run_translation_script(self, pdf_path: Path):
         """呼叫 PowerShell 進行翻譯"""
         if not self.script_path.exists():
-            self.logger.error(f"❌ 找不到翻譯腳本: {self.script_path}")
+            self.logger.error(f"找不到翻譯腳本: {self.script_path}")
             return
 
         # 檢查翻譯檔是否已存在
         zh_md_path = pdf_path.with_suffix('.zh.md')
         if zh_md_path.exists():
-             self.logger.info(f"⏭️ 翻譯檔已存在，跳過翻譯: {zh_md_path.name}")
+             self.logger.info(f"翻譯檔已存在，跳過翻譯: {zh_md_path.name}")
              return
 
-        self.logger.info(f"🤖 呼叫 Gemini 進行翻譯: {pdf_path.name}...")
+        self.logger.info(f"呼叫 Gemini 進行翻譯: {pdf_path.name}...")
         
         # 構建指令
         cmd = [
@@ -142,6 +142,6 @@ class PaperDownloader:
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
         
         if result.returncode == 0:
-            self.logger.info(f"🎉 翻譯成功！輸出至: {zh_md_path.name}")
+            self.logger.info(f"翻譯成功！輸出至: {zh_md_path.name}")
         else:
-            self.logger.error(f"❌ 翻譯腳本執行失敗:\n[STDOUT]:\n{result.stdout}\n[STDERR]:\n{result.stderr}")
+            self.logger.error(f"翻譯腳本執行失敗:\n[STDOUT]:\n{result.stdout}\n[STDERR]:\n{result.stderr}")

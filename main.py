@@ -34,7 +34,7 @@ def main():
     
     try:
         # 1. 初始化
-        logger.info("🚀 系統啟動...")
+        logger.info("系統啟動...")
         load_dotenv()
         config = load_config()
         api_key = os.getenv("S2_API_KEY")
@@ -46,21 +46,44 @@ def main():
         writer = ObsidianWriter(config)
         downloader = PaperDownloader(config)
 
-        # 1.5 執行收割 (維持不變)
+        # 1.5 執行收割
         try:
             harvester.harvest(lookback_days=7)
         except Exception as e:
             logger.error(f"收割評分失敗，將使用舊有 Profile 繼續: {e}")
         
-        # 2. 獲取候選 (維持不變)
-        query = config['search']['keywords']
+        # 2. 獲取候選
+        keywords = config['search']['keywords']
+        # 確保 keywords 是列表，如果使用者只寫了一個字串，自動轉為列表
+        if isinstance(keywords, str):
+            keywords = [keywords]
+            
         years = config['search']['year_range']
-        candidates = client.search_papers(query, years)
         
-        # 3. 過濾與排序 (維持不變)
+        all_candidates = {} # 使用字典依 paperId 去重
+        
+        logger.info(f"🔍 啟動多領域搜尋: 包含 {len(keywords)} 個主題")
+        
+        for topic in keywords:
+            logger.info(f"  - 正在搜尋領域: {topic}...")
+            papers = client.search_papers(topic, years, limit=15)
+            
+            for p in papers:
+                all_candidates[p['paperId']] = p
+                
+        # 轉回列表
+        candidates = list(all_candidates.values())
+        logger.info(f"✅ 多領域搜尋完成，合併後共 {len(candidates)} 篇候選論文")
+        
+        # 3. 過濾與排序
         whitelist = set(config['filters']['whitelist_fields'])
+        history_set = set(profile_manager.profile.get('history_ids', []))
+        logger.info(f"目前歷史資料庫已有 {len(history_set)} 篇論文 (將被排除)")
         valid_ids = []
         for p in candidates:
+            p_id = p['paperId']
+            if p_id in history_set:
+                continue
             fields = set(p.get('fieldsOfStudy') or [])
             if not fields.isdisjoint(whitelist):
                 valid_ids.append(p['paperId'])
@@ -72,22 +95,21 @@ def main():
         
         top_papers = ranker.rank_candidates(detailed_papers, top_k=5, user_vector=user_vec)
         
-        # 4. 寫入介面 (修改核心邏輯)
+        # 4. 寫入介面
         if top_papers:
-            # 嘗試寫入筆記 (如果已存在，writer 會自動跳過並回傳 False，但這不重要)
             writer.write_recommendations(top_papers)
-            
-            # [修改點] 不論筆記是否是新建立的，都強制執行下載檢查
-            # Downloader 內部本身就有檢查 "檔案是否存在" 的邏輯，所以這裡直接呼叫是安全的
-            logger.info("🚀 進入檔案檢查流程：確認 PDF 與翻譯是否齊全...")
+
+            recommended_ids = [p['paperId'] for p in top_papers]
+            profile_manager.add_recommendations(recommended_ids)
+            logger.info("進入檔案檢查流程：確認 PDF 與翻譯是否齊全...")
             downloader.process_papers(top_papers)
             
-            logger.info("🎉 本次執行結束。")
+            logger.info("本次執行結束。")
         else:
-            logger.warning("⚠️ 今日未能選出任何論文。")
+            logger.warning("今日未能選出任何論文。")
             
     except Exception as e:
-        logger.error(f"💥 系統崩潰: {e}", exc_info=True)
+        logger.error(f"系統崩潰: {e}", exc_info=True)
 
 if __name__ == "__main__":
     main()

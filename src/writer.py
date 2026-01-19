@@ -42,6 +42,7 @@ class ObsidianWriter:
         tags: [daily_rec, paper_reading]
         status: "To Read"
         ---
+
         """
 
         # --- 2. 筆記內容 (還原為經典格式) ---

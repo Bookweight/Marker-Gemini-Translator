@@ -73,7 +73,7 @@ class S2Client:
             return response.json()
 
         except requests.exceptions.RequestException as e:
-            self.logger.error(f"❌ API 請求失敗: {e} | URL: {url}")
+            self.logger.error(f"API 請求失敗: {e} | URL: {url}")
             raise  # 拋出讓 Tenacity 捕獲
 
     def search_papers(self, query: str, year_range: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -97,12 +97,12 @@ class S2Client:
             "fields": "paperId,title,fieldsOfStudy,year" # 只抓過濾需要的欄位
         }
         
-        self.logger.info(f"🔍 執行搜尋: Query='{query}', Year='{year_range}', Limit={search_limit}")
+        self.logger.info(f"執行搜尋: Query='{query}', Year='{year_range}', Limit={search_limit}")
         
         data = self._make_request('GET', endpoint, params=params)
         papers = data.get('data', [])
         
-        self.logger.info(f"✅ 搜尋完成，共找到 {len(papers)} 篇候選論文")
+        self.logger.info(f"搜尋完成，共找到 {len(papers)} 篇候選論文")
         return papers
 
     def get_batch_details(self, paper_ids: List[str]) -> List[Dict[str, Any]]:
@@ -140,9 +140,9 @@ class S2Client:
                     valid_items = [p for p in result if p is not None]
                     all_details.extend(valid_items)
             except Exception as e:
-                self.logger.error(f"❌ 批次處理失敗 (Index {i}): {e}")
+                self.logger.error(f"批次處理失敗 (Index {i}): {e}")
                 # 選擇：這裡可以決定要中斷還是繼續 (目前策略是紀錄錯誤並繼續)
                 continue
                 
-        self.logger.info(f"✅ 批量下載完成，成功獲取 {len(all_details)} 篇論文詳情")
+        self.logger.info(f"批量下載完成，成功獲取 {len(all_details)} 篇論文詳情")
         return all_details
