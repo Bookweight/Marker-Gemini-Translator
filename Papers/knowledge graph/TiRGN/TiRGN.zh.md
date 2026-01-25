@@ -5,6 +5,7 @@ status: Imported
 created_date: 2026-01-14
 pdf_link: "[[TiRGN.pdf]]"
 tags:
+  - paper
   - knowledge_graph
 ---
 

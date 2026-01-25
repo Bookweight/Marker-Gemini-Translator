@@ -5,6 +5,7 @@ status: Imported
 created_date: 2026-01-14
 pdf_link: "[[HyTE.pdf]]"
 tags:
+  - paper
   - knowledge_graph
 ---
 # HyTE: 基於超平面的時間感知知識圖譜嵌入

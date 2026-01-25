@@ -5,6 +5,7 @@ status: Imported
 created_date: 2026-01-14
 pdf_link: "[[Deriving_Validity_Time_in_Knowledge_Graph.pdf]]"
 tags:
+  - paper
   - knowledge_graph
 ---
 # 推導知識圖譜中的有效時間

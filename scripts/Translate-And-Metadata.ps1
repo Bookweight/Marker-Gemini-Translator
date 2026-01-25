@@ -38,19 +38,56 @@ catch {
 }
 Push-Location $PSScriptRoot
 try {
-    $TranslationPrompt = "You are a professional academic translator. Your task is to translate the attached PDF document into Traditional Chinese (繁體中文).
-    **IMPORTANT SYSTEM INSTRUCTION: DO NOT USE ANY TOOLS.** Do not attempt to run shell commands, file readers, or search tools. 
-    Directly extract and translate the text content from the provided PDF file.
-    Strictly follow these rules:
-        1. **Text Content (Bilingual):** For standard paragraphs, headers, and list items, output the [Original English Text] first, followed immediately by its [Traditional Chinese Translation].
-        2. **Tables (Translated Only):** For any tables found, output the **Translated Traditional Chinese Table** directly in Markdown format. Do NOT list the original English table inside the cells. Translate table headers and content, but keep technical terms (like 'ResNet-50', 'Accuracy') in English.
-        3. **Structure:** Maintain all original headings (#, ##), bullets, and numbering.
-        4. **Accuracy:** Keep formulas and acronyms intact. Ensure the translation is academic and professional.
-        5. **Completeness:** Translate the entire document from start to finish.
-        Output format must be Markdown."
+    $TranslationPrompt = "You are an expert Academic Translator and Document Formatter specializing in Computer Science papers. Your target format is Obsidian-compatible Markdown.
+**TOOL USE POLICY (CRITICAL):**
+1. **ALLOWED (INPUT):** You **MUST** use your internal PDF parsing/reading capabilities to consume the attached document. This is required to perform the task.
+2. **FORBIDDEN (OUTPUT):** You are **STRICTLY PROHIBITED** from using ""Action Tools"" to save results. Do NOT attempt to use:
+   - 'write_file'
+   - 'write_todos'
+   - 'python_interpreter'
+   - 'create_file'
+**TASK:**
+Translate the attached PDF content into Traditional Chinese (繁體中文) while strictly preserving the original English text for comparison.
 
-    # [關鍵修正] 幫路徑加上引號，解決資料夾或檔名中有空白的問題
-    # 注意：Gemini CLI 使用 @ 來指定檔案，我們把引號包在路徑外層
+**CRITICAL RULES:**
+
+0.**HEADINGS & SECTION TITLES (STRICT FORMATTING):**
+
+    **Main Sections (Level 1 & 2):**
+    * **Target:** Standard academic headers (Abstract, Introduction, Related Work, Method, Experiments, Conclusion, References) and Top-Level Numbered Sections (1., 2., 3.).
+    * **Format:** Keep the English title, add a hyphen, and append the Chinese translation on the **SAME LINE**.
+    * **Template:** `## Original English - Chinese Translation`
+    * *Example:* `## Abstract - 摘要`
+    * *Example:* `## 1. Introduction - 緒論`
+
+    **Sub-Sections & Descriptive Titles (Level 3+):**
+    * **Target:** Nested sections (1.1, 2.3.1) or specific descriptive sub-titles (e.g., ""3.1 Motivation..."").
+    * **Format:** Output **ONLY** the Traditional Chinese translation. Keep the numbering if present.
+    * **Template:** `### Number Chinese_Translation`
+    * *Example:* Input ""3 Motivation: Modeling Long-Range..."" -> Output `### 3 動機：建模長距離...`
+
+1.  **NOISE REMOVAL (Pre-processing):**
+    * IGNORE page headers, footers, page numbers (e.g., ""1"", ""arXiv:..."", and running titles. Do not translate or output them.
+    * Merge sentences that are broken across lines or pages into a single coherent paragraph before translating.
+
+2.  **TEXT CONTENT (Bilingual Layout):**
+    * Processing logic: Read one logical paragraph -> Output **Original English** -> Insert **Empty Line** -> Output **Traditional Chinese Translation** -> Insert **Empty Line**.
+    * **Translation Style:** Academic, formal, and precise. Use standard Taiwan academic terminology (e.g., ""Transformer"" -> ""Transformer"", ""optimization"" -> ""mization"" -> ""最佳化"").
+    * **Exception:** Do **NOT** translate the **References** section. Output it strictly in original English.
+
+3.  **STRICT TABLE RULES (HTML FORMAT):**
+    * **Format:** You MUST reconstruct all tables using **HTML Syntax** (`<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, `<td>`). **DO NOT** use Markdown pipe tables (`|`).
+    * **Structure:** Use `colspan=""X""` and `rowspan=""Y""` attributes to accurately represent merged headers or merged row labels. This is critical for preserving the logical hierarchy of complex academic tables.
+    * **Reconstruction:** The input text for tables might be fragmented. You must infer the logical columns and rows based on the semantic content and alignment.
+    * **English Only:** The content inside the table (headers, numbers, legends) must remain **100% in Original English**. **DO NOT translate** any text inside the `<table>` tags.
+    * **Styling:** Keep it semantic. Use `<th>` for headers and `<td>` for data. Do not add complex inline CSS styles.
+
+4.  **MATH & FORMULAS:**
+    * Keep all LaTeX formulas intact (e.g., `$x_i$`, `$$\sum$$`). Do not translate variables.
+    * Ensure inline math uses single `$` and block math uses `$$`.
+
+**EXECUTION:**
+Start translating from the Title and Abstract down to the Conclusion. Then append the untranslated References."
     $CommandString = "$TranslationPrompt" + " @" + "$TempFileName"
 
     Write-Host "🚀 Gemini is translating... Please wait." -ForegroundColor Cyan
@@ -81,7 +118,6 @@ try {
         $FullContent = [System.IO.File]::ReadAllText($TargetFile.FullName, $Utf8NoBom)
         
         if (-not $FullContent.StartsWith("---")) {
-            $PaperFolderName = $TargetFile.Directory.Name
             $Field = $TargetFile.Directory.Parent.Name
             $CleanTitle = $TargetFile.BaseName -replace "\.zh$", ""
             $CurrentDate = Get-Date -Format "yyyy-MM-dd"

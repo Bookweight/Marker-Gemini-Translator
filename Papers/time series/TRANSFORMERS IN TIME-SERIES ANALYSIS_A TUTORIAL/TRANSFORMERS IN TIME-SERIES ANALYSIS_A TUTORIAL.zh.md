@@ -6,7 +6,7 @@ created_date: 2026-01-12
 pdf_link: "[[TRANSFORMERS IN TIME-SERIES ANALYSIS_A TUTORIAL.pdf]]"
 tags:
   - paper
-  - time_series
+  - Time_series
 ---
 
 #Translated_paper

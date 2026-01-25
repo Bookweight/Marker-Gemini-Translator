@@ -1,10 +1,12 @@
 ---
-title: "Xception Deep Learning with Depthwise Separable Convolutions"
-field: "Papers"
-status: "Imported"
+title: Xception Deep Learning with Depthwise Separable Convolutions
+field: Deep_Learning
+status: Imported
 created_date: 2026-01-19
 pdf_link: "[[Xception Deep Learning with Depthwise Separable Convolutions.pdf]]"
-tags: [paper, Papers]
+tags:
+  - paper
+  - Deep_learning
 ---
 
 # Xception: Deep Learning with Depthwise Separable Convolutions

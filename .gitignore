@@ -4,6 +4,7 @@
 .obsidian/cache/
 .obsidian/indexed-db/
 .obsidian/plugins/obsidian-git/data.json
+.obsidian/workspace.json
 
 # ---OS files ---
 $RECYCLE.BIN/
@@ -13,7 +14,9 @@ Desktop.ini
 
 # --- script-generated temporary files ---
 *.log
+*.pdf
 .env
 __pycache__/
 *.pyc
 tmp/
+Papers/

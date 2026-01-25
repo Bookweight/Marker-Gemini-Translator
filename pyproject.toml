@@ -3,9 +3,13 @@ name = "paper-reading"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
+    "markdown>=3.9",
+    "markitdown[pdf]>=0.1.4",
     "numpy>=2.0.2",
+    "pymupdf4llm>=0.2.9",
+    "pypdf>=6.6.0",
     "python-dotenv>=1.2.1",
     "pyyaml>=6.0.3",
     "requests>=2.32.5",
