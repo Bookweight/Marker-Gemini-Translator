@@ -15,14 +15,26 @@ if (-not (Test-Path $InputFile -PathType Leaf)) {
 $FullPath = (Get-Item $InputFile).FullName
 $OutputFile = $FullPath -replace '\.[^.]+$', '.zh.md'
 # [修正] 指向新的 python 腳本
-$TranslatorScript = Join-Path $PSScriptRoot "..\src\paper_translator.py"
+$VenvPython = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
+
+if (Test-Path $VenvPython) {
+    $PythonExe = $VenvPython
+    Write-Host "🐍 Using Virtual Environment: $PythonExe" -ForegroundColor Green
+} else {
+    # 如果找不到虛擬環境，嘗試用全域 python (可能會失敗)
+    $PythonExe = "python"
+    Write-Host "⚠️  Virtual environment not found at $VenvPython. Using global python." -ForegroundColor Yellow
+}
+
+# 指向 V10 (Marker) 腳本
+$TranslatorScript = Join-Path $PSScriptRoot "..\src\paper_translator_v6.py"
 
 Write-Host "---"
 Write-Host "Processing: $FullPath" -ForegroundColor Cyan
 
 # 1. 呼叫 Python 翻譯核心
 # 注意：所有複雜邏輯都在 Python 裡了，這裡只要等待它完成
-$pyProc = Start-Process -FilePath "python" -ArgumentList "`"$TranslatorScript`"", "`"$FullPath`"", "`"$OutputFile`"" -Wait -NoNewWindow -PassThru
+$pyProc = Start-Process -FilePath $PythonExe -ArgumentList "`"$TranslatorScript`"", "`"$FullPath`"", "`"$OutputFile`"" -Wait -NoNewWindow -PassThru
 
 if ($pyProc.ExitCode -eq 0) {
     
@@ -36,7 +48,7 @@ if ($pyProc.ExitCode -eq 0) {
             $CleanTitle = $TargetFile.BaseName -replace "\.zh$", ""
             $CurrentDate = Get-Date -Format "yyyy-MM-dd"
             
-            $Yaml = @"
+            $Yaml = $Yaml = @"
 ---
 title: "$CleanTitle"
 field: "$Field"
