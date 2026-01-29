@@ -12,7 +12,30 @@ if (-not (Test-Path $InputFile -PathType Leaf)) {
     exit 1
 }
 
-$FullPath = (Get-Item $InputFile).FullName
+$OriginalFileObj = Get-Item $InputFile
+$FullPath = $OriginalFileObj.FullName
+$BaseName = $OriginalFileObj.BaseName
+$ParentDir = $OriginalFileObj.DirectoryName
+
+# --- [新增] 自動歸檔邏輯 (Auto-Archive Logic) ---
+# 目的：建立與論文同名的資料夾，並將 PDF 移入，確保生成的 images 不會與其他論文混雜
+$PaperFolder = Join-Path $ParentDir $BaseName
+$NewPdfPath = Join-Path $PaperFolder $OriginalFileObj.Name
+
+# 1. 建立專屬資料夾 (如果不存在)
+if (-not (Test-Path $PaperFolder)) {
+    New-Item -ItemType Directory -Path $PaperFolder | Out-Null
+    Write-Host "📂 Created Workspace: $PaperFolder" -ForegroundColor Cyan
+}
+
+# 2. 移動 PDF 到專屬資料夾 (如果它還不在裡面的話)
+if ($FullPath -ne $NewPdfPath) {
+    Move-Item -Path $FullPath -Destination $PaperFolder -Force
+    Write-Host "🚚 Moved PDF to Workspace..." -ForegroundColor DarkGray
+    # 更新 FullPath 指向新的位置
+    $FullPath = $NewPdfPath
+}
+
 $OutputFile = $FullPath -replace '\.[^.]+$', '.zh.md'
 # [修正] 指向新的 python 腳本
 $VenvPython = Join-Path $PSScriptRoot "..\.venv\Scripts\python.exe"
