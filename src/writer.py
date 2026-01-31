@@ -41,7 +41,7 @@ class ObsidianWriter:
         paper_count: {len(papers)}
         tags: [daily_rec, paper_reading]
         status: "To Read"
-    ---
+---
 
         """
 

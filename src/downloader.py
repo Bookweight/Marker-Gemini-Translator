@@ -1,11 +1,11 @@
 import logging
-import subprocess
 import requests
 import time
 import re
 from pathlib import Path
 from pypdf import PdfReader, PdfWriter
 from typing import List, Dict, Any
+from src.translator import PaperTranslator
 
 class PaperDownloader:
     def __init__(self, config: Dict[str, Any]):
@@ -31,7 +31,8 @@ class PaperDownloader:
             "Hearing Loss Simulation": ["Hearing", "Audio"],
             "Database": ["Database"]
         }
-        self.script_path = Path("scripts/Translate-With-Markdown.ps1")
+        # Initialize Translator
+        self.translator = PaperTranslator(config)
         
     def _determine_save_dir(self, paper: Dict[str, Any]) -> Path:
         """根據論文 Metadata 決定存檔資料夾"""
@@ -153,36 +154,25 @@ class PaperDownloader:
             return None
 
     def _run_translation_script(self, pdf_path: Path, paper_metadata: Dict):
-        """呼叫 PowerShell 翻譯"""
-        if not self.script_path.exists():
-            self.logger.error(f"找不到翻譯腳本: {self.script_path}")
-            return
-
+        """Invoke Python Translator directly"""
         zh_md_path = pdf_path.with_suffix('.zh.md')
         if zh_md_path.exists():
-            self.logger.info(f"⏭翻譯已存在，跳過")
-        
-        self.logger.info(f"呼叫 Gemini 翻譯 ({pdf_path.parent.name}): {pdf_path.name}...")
-        
-        cmd = [
-            "powershell", 
-            "-NoProfile", 
-            "-ExecutionPolicy", "Bypass", 
-            "-File", str(self.script_path), 
-            "-InputFile", str(pdf_path)
-        ]
-        
-        # 執行並捕捉輸出
-        result = subprocess.run(cmd, capture_output=True)
-        
-        # 手動解碼 stdout 和 stderr (嘗試 utf-8，失敗則用 replace)
-        stdout_str = result.stdout.decode('utf-8', errors='replace')
+            self.logger.info(f"⏭ Translation exists, skipping: {zh_md_path.name}")
+            return
+            
+        # [Fix] Organize Folder First (Restore Structure)
+        try:
+            pdf_path = self.translator.organize_paper_folder(pdf_path)
+            # Update output path based on new location
+            zh_md_path = pdf_path.with_suffix('.zh.md')
+        except Exception as e:
+            self.logger.warning(f"Organization step skipped: {e}")
 
-        if result.returncode == 0:
-            self.logger.info(f"翻譯完成！")
-        else:
-            stderr_str = result.stderr.decode('utf-8', errors='replace')
-            self.logger.error(f"翻譯腳本執行失敗:\n[STDOUT]:\n{stdout_str}\n[STDERR]:\n{stderr_str}")
+        self.logger.info(f"🧠 Starting Native Python Translation: {pdf_path.name}...")
+        try:
+            self.translator.translate_paper(pdf_path, zh_md_path)
+        except Exception as e:
+            self.logger.error(f"Translation Crash: {e}", exc_info=True)
 
     def process_papers(self, papers: List[Dict[str, Any]]):
         """主流程"""

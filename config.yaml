@@ -48,3 +48,9 @@ obsidian:
   vault_path: "C:/Users/User/Desktop/paper reading"
   daily_folder: "Papers/Daily Notes"
   unclassified_folder: "Papers/unclassified"
+
+translation:
+  model: "gemini-2.5-flash"
+  batch_size: 10000   # Characters per batch
+  target_language: "Traditional Chinese (Taiwan)"
+  # API Key will be loaded from process env "GEMINI_API_KEY" or "GOOGLE_API_KEY"

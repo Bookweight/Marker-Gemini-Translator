@@ -1,5 +1,7 @@
 # Paper Reading Assistant
 
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
 An automated tool to discover, download, and translate academic papers for your Obsidian knowledge base.
 
 ## Features
@@ -8,7 +10,7 @@ An automated tool to discover, download, and translate academic papers for your 
 *   **Personalized Ranking**: Ranks papers based on your reading history and preferences using vector similarity.
 *   **Automated Downloading**: Automatically downloads open-access PDFs or attempts retrieval via ArXiv.
 *   **Intelligent Organization**: Categorizes papers into folders (e.g., Computer Vision, NLP, Time Series) based on their fields of study.
-*   **AI-Powered Translation**: Uses **Google Gemini** to generate high-quality, academic translations of the abstract and key sections.
+*   **AI-Powered Translation**: Uses **Google Gemini** (via Python SDK) to generate high-quality, academic translations of the abstract and key sections.
 *   **Obsidian Integration**: Generates daily recommendation notes and injects Dataview-compatible metadata (YAML frontmatter) into translated files.
 *   **Hybrid Workflow**: Supports both automated daily batch processing and manual single-file translation.
 
@@ -17,36 +19,36 @@ An automated tool to discover, download, and translate academic papers for your 
 ```text
 .
 ├── main.py                 # Entry point for daily automation
-├── config.yaml             # Configuration file (search terms, paths)
+├── config.yaml             # Configuration file (search terms, paths, translation settings)
 ├── .env                    # Secrets (API Keys)
 ├── requirements.txt        # Python dependencies
 ├── src/
-│   ├── client.py           # Semantic Scholar API client
+│   ├── translator.py       # Core Translation Logic (Integrates Gemini SDK & Marker)
 │   ├── downloader.py       # PDF downloader and translation trigger
+│   ├── client.py           # Semantic Scholar API client
 │   ├── harvester.py        # User profile and history manager
-│   ├── prompt_engine.py    # Generates prompts for translation
 │   ├── ranker.py           # Paper ranking logic
 │   └── writer.py           # Obsidian note writer
-└── scripts/
-    └── Translate-And-Metadata.ps1  # PowerShell script for PDF processing & metadata injection
+└── scripts/                # (Legacy) PowerShell helper scripts
 ```
 
 ## Setup
 
 1.  **Prerequisites**
     *   Python 3.8+
-    *   PowerShell (required for the translation script execution)
     *   [Semantic Scholar API Key](https://www.semanticscholar.org/product/api)
+    *   [Google Gemini API Key](https://ai.google.dev/)
 
 2.  **Configuration**
     *   Create a `.env` file in the root directory:
         ```env
         S2_API_KEY=your_semantic_scholar_api_key
+        GEMINI_API_KEY=your_google_gemini_api_key
         ```
     *   Ensure `config.yaml` is set up with your preferences:
         *   `obsidian.vault_path`: Path to your Obsidian vault.
         *   `search.keywords`: List of topics to search for.
-        *   `search.year_range`: Year range for papers.
+        *   `translation.model`: Gemini Model to use (e.g., `gemini-2.0-flash-exp`).
 
 ## Usage
 
@@ -61,4 +63,15 @@ The script will:
 2.  Filter and rank them based on your profile.
 3.  Create a daily summary note in your Obsidian daily folder.
 4.  Download the PDFs to categorized folders (e.g., `Papers/Time Series`).
-5.  Trigger the translation script to generate `.zh.md` files with Dataview metadata.
+5.  Invoke the Python translation engine to generate `.zh.md` files with Dataview metadata.
+
+### Manual Translation
+
+If you want to translate a single PDF file (e.g., a paper you downloaded manually), you can invoke the translator directly:
+
+```bash
+python src/translator.py "c:/path/to/your/paper.pdf"
+```
+
+*   The script will load API Keys from `.env` and settings from `config.yaml`.
+*   The output file (`.zh.md`) will be generated in the same directory as the PDF.
