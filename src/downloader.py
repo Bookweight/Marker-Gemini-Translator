@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from pypdf import PdfReader, PdfWriter
 from typing import List, Dict, Any
-from src.translator import PaperTranslator
+from src.translator import PaperTranslator, QuotaExceededError
 
 class PaperDownloader:
     def __init__(self, config: Dict[str, Any]):
@@ -33,6 +33,7 @@ class PaperDownloader:
         }
         # Initialize Translator
         self.translator = PaperTranslator(config)
+        self.skip_translation = False
         
     def _determine_save_dir(self, paper: Dict[str, Any]) -> Path:
         """根據論文 Metadata 決定存檔資料夾"""
@@ -72,7 +73,7 @@ class PaperDownloader:
         if file_size_mb < 20:
             return input_path
             
-        self.logger.warning(f"⚠️ 檔案過大 ({file_size_mb:.2f} MB)，嘗試縮減: {input_path.name}")
+        self.logger.warning(f"[WARNING] File too large ({file_size_mb:.2f} MB), attempting to compress: {input_path.name}")
         
         try:
             reader = PdfReader(input_path)
@@ -92,12 +93,12 @@ class PaperDownloader:
             # 檢查是否真的變小了
             new_size = temp_output.stat().st_size / (1024 * 1024)
             if new_size < 20:
-                self.logger.info(f"✅ 縮減成功: {new_size:.2f} MB")
+                self.logger.info(f"[SUCCESS] Compression successful: {new_size:.2f} MB")
                 input_path.unlink() # 刪除原檔
                 temp_output.rename(input_path) # 取代原檔
                 return input_path
             else:
-                self.logger.warning(f"❌ 縮減後仍過大 ({new_size:.2f} MB)，可能導致翻譯失敗。")
+                self.logger.warning(f"[WARNING] Still too large after compression ({new_size:.2f} MB), translation may fail.")
                 temp_output.unlink()
                 return input_path
                 
@@ -116,10 +117,10 @@ class PaperDownloader:
                 self.logger.warning(f"發現無效舊檔 ({filename})，刪除重試...")
                 file_path.unlink()
             else:
-                self.logger.info(f"⏭PDF 已存在 ({target_dir.name})，跳過下載")
+                self.logger.info(f"[SKIP] PDF exists ({target_dir.name}), skipping download")
                 return file_path
             
-        self.logger.info(f"⬇️ 下載中 ({target_dir.name}): {filename}")
+        self.logger.info(f"[DOWNLOADING] ({target_dir.name}): {filename}")
         
         try:
             headers = {
@@ -157,7 +158,7 @@ class PaperDownloader:
         """Invoke Python Translator directly"""
         zh_md_path = pdf_path.with_suffix('.zh.md')
         if zh_md_path.exists():
-            self.logger.info(f"⏭ Translation exists, skipping: {zh_md_path.name}")
+            self.logger.info(f"[SKIP] Translation exists: {zh_md_path.name}")
             return
             
         # [Fix] Organize Folder First (Restore Structure)
@@ -168,9 +169,12 @@ class PaperDownloader:
         except Exception as e:
             self.logger.warning(f"Organization step skipped: {e}")
 
-        self.logger.info(f"🧠 Starting Native Python Translation: {pdf_path.name}...")
+        self.logger.info(f"[TRANSLATING] Starting Native Python Translation: {title}...")
         try:
             self.translator.translate_paper(pdf_path, zh_md_path)
+        except QuotaExceededError:
+            self.logger.error("[ERROR] Translation Quota Exceeded! Switching to 'Download Only' mode.")
+            raise  # Re-raise to be caught in process_papers
         except Exception as e:
             self.logger.error(f"Translation Crash: {e}", exc_info=True)
 
@@ -195,5 +199,12 @@ class PaperDownloader:
 
             # 3. 翻譯邏輯 (修正參數傳遞)
             if pdf_path:
-                # [FIXED] 這裡補上 paper 參數
-                self._run_translation_script(pdf_path, paper)
+                if self.skip_translation:
+                    self.logger.info(f"[SKIP] Skipping translation (Quota Exceeded): {title}")
+                else:
+                    try:
+                        # [FIXED] 這裡補上 paper 參數
+                        self._run_translation_script(pdf_path, paper)
+                    except QuotaExceededError:
+                        self.skip_translation = True
+                        self.logger.warning("[WARNING] Global Translation Quota Hit. Disabling translation for remaining papers.")

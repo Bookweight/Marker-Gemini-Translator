@@ -1,9 +1,0 @@
-{
-  "cssTheme": "AnuPpuccin",
-  "accentColor": "#5cf596",
-  "theme": "obsidian",
-  "enabledCssSnippets": [
-    "pdf_no_invert",
-    "disable-pdf-invert"
-  ]
-}

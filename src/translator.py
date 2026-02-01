@@ -6,9 +6,14 @@ import logging
 import shutil
 import yaml
 import datetime
+import requests
 from pathlib import Path
 import fitz  # PyMuPDF
 from dotenv import load_dotenv
+
+# Define custom exception for Quota Exceeded
+class QuotaExceededError(Exception):
+    pass
 
 # Try importing marker
 try:
@@ -24,6 +29,7 @@ except ImportError:
 try:
     from google import genai
     from google.genai import types
+    from google.api_core.exceptions import ResourceExhausted
     SDK_AVAILABLE = True
 except ImportError:
     SDK_AVAILABLE = False
@@ -38,13 +44,19 @@ class PaperTranslator:
         # Initialize API Client
         load_dotenv()
         self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.groq_api_key = os.getenv("GROQ_API_KEY")
         self.client = None
         
         if self.api_key and SDK_AVAILABLE:
             self.client = genai.Client(api_key=self.api_key)
-            self.logger.info(f"✅ Gemini SDK Initialized (Model: {self.model_name})")
+            self.logger.info(f"[SUCCESS] Gemini SDK Initialized (Model: {self.model_name})")
         else:
-            self.logger.warning("⚠️ GEMINI_API_KEY not found or SDK missing. Translation might fail.")
+            self.logger.warning("[WARNING] GEMINI_API_KEY not found or SDK missing. Translation might fail.")
+
+        if self.groq_api_key:
+            self.logger.info("[SUCCESS] Groq Fallback Initialized")
+        else:
+            self.logger.warning("[WARNING] GROQ_API_KEY not found. Fallback disabled.")
 
         # Initialize Marker
         if MARKER_AVAILABLE:
@@ -62,7 +74,7 @@ class PaperTranslator:
                 renderer=config_parser.get_renderer()
             )
         else:
-            self.logger.error("❌ Marker modules missing.")
+            self.logger.error("[ERROR] Marker modules missing.")
 
     def _clean_filename(self, name):
         return re.sub(r'[^a-zA-Z0-9_.-]', '_', name)
@@ -78,7 +90,7 @@ class PaperTranslator:
         
         # Check if already in a dedicated folder (Parent name == Paper name)
         if parent_dir.name == paper_name:
-            self.logger.info(f"📂 Already in dedicated folder: {parent_dir}")
+            self.logger.info(f"[INFO] Already in dedicated folder: {parent_dir}")
             return pdf_path
             
         # Create dedicated folder
@@ -91,7 +103,7 @@ class PaperTranslator:
         try:
             if pdf_path.exists():
                 shutil.move(str(pdf_path), str(new_pdf_path))
-                self.logger.info(f"📦 Organized paper into: {new_dir}")
+                self.logger.info(f"[INFO] Organized paper into: {new_dir}")
                 return new_pdf_path
         except Exception as e:
             self.logger.warning(f"Failed to organize folder: {e}")
@@ -99,70 +111,52 @@ class PaperTranslator:
             
         return new_pdf_path
 
-    def _detect_content_boundaries(self, page):
-        """V26 Logic"""
-        page_height = page.rect.height
-        top_limit = 0
-        bottom_limit = page_height
-        paths = page.get_drawings()
-        horizontal_lines = []
-        
-        for p in paths:
-            rect = p["rect"]
-            if rect.width > page.rect.width * 0.4 and rect.height < 5:
-                horizontal_lines.append(rect.y0)
-                
-        if horizontal_lines:
-            horizontal_lines.sort()
-            header_candidates = [y for y in horizontal_lines if y < page_height * 0.2]
-            if header_candidates: top_limit = header_candidates[-1]
-            footer_candidates = [y for y in horizontal_lines if y > page_height * 0.75]
-            if footer_candidates: bottom_limit = footer_candidates[0]
-            
-        return top_limit, bottom_limit
-
-    def _extract_images(self, pdf_path, output_dir):
-        """V26 Logic"""
+    def _save_and_link_images(self, text, rendered_images, output_dir):
+        """
+        Saves images from Marker's native output and updates links.
+        Ensures 1-to-1 mapping. Removes broken links.
+        """
         images_dir = output_dir / "images"
-        images_dir.mkdir(exist_ok=True)
+        images_dir.mkdir(parents=True, exist_ok=True)
         
-        doc = fitz.open(pdf_path)
-        extracted_map = {} 
-        
-        for page_index in range(len(doc)):
-            page = doc[page_index]
-            image_list = page.get_images(full=True)
-            extracted_map[page_index] = []
-            top_limit, bottom_limit = self._detect_content_boundaries(page)
+        # Save all available images
+        saved_images = set()
+        for filename, image_data in rendered_images.items():
+            image_path = images_dir / filename
+            try:
+                # Marker usually returns PIL images
+                if hasattr(image_data, 'save'):
+                    image_data.save(image_path)
+                else:
+                    with open(image_path, "wb") as f:
+                        f.write(image_data)
+                saved_images.add(filename)
+            except Exception as e:
+                self.logger.warning(f"[WARNING] Failed to save image {filename}: {e}")
+
+        # Fix links in text
+        def replace_link(match):
+            alt_text = match.group(1)
+            image_ref = match.group(2)
+            filename = Path(image_ref).name
             
-            if image_list:
-                for img_index, img in enumerate(image_list):
-                    xref = img[0]
-                    is_noise = False
-                    rects = page.get_image_rects(xref)
-                    if rects:
-                        rect = rects[0]
-                        mid_y = (rect.y0 + rect.y1) / 2
-                        if mid_y < top_limit or mid_y > bottom_limit:
-                            is_noise = True
-                    
-                    try:
-                        base_image = doc.extract_image(xref)
-                        image_bytes = base_image["image"]
-                        image_ext = base_image["ext"]
-                        image_name = f"p{page_index}_img{img_index}.{image_ext}"
-                        image_path = images_dir / image_name
-                        with open(image_path, "wb") as f:
-                            f.write(image_bytes)
-                        extracted_map[page_index].append({
-                            "filename": image_name, "is_noise": is_noise
-                        })
-                    except Exception:
-                        pass
-        return extracted_map
+            if filename in saved_images:
+                return f"![{alt_text}](images/{filename})"
+            else:
+                self.logger.warning(f"[WARNING] Image referenced but missing: {filename}")
+                return "" # Remove broken link
+
+        # Regex to find markdown images: ![alt](path)
+        new_text = re.sub(r'!\[(.*?)\]\((.*?)\)', replace_link, text)
+        return new_text
 
     def _clean_text_noise(self, text):
+        # [Fix] Remove Marker artifacts globally
+        text = re.sub(r'<span id="page-\d+-\d+"></span>', '', text)
+        text = re.sub(r'\[(\d+)\]\(#page-\d+-\d+\)', r'[\1]', text) # Keep citation number, remove link
+        
         lines = text.split('\n')
+
         cleaned_lines = []
         patterns = [
             r'^\s*\d+\s+Page\s+\d+\s+of\s+\d+',
@@ -236,33 +230,7 @@ class PaperTranslator:
 
         return '\n'.join(new_lines)
 
-    def _inject_images(self, text, image_map):
-        """V26 Logic with Fixed Regex"""
-        pattern = re.compile(r'!\[(.*?)\]\(.*?_page_(\d+).*?\)')
-        parts = []
-        last_end = 0
-        page_counter = {} 
-        
-        for match in pattern.finditer(text):
-            parts.append(text[last_end:match.start()])
-            alt = match.group(1) or "Figure"
-            page_idx = int(match.group(2))
-            
-            if page_idx not in page_counter: page_counter[page_idx] = 0
-            current_idx = page_counter[page_idx]
-            images_on_page = image_map.get(page_idx, [])
-            
-            if current_idx < len(images_on_page):
-                img_data = images_on_page[current_idx]
-                if not img_data["is_noise"]:
-                    fname = img_data["filename"]
-                    parts.append(f"![{alt}](images/{fname})")
-                page_counter[page_idx] += 1
-            else:
-                parts.append(f"> *[Figure: Vector/Text - Not Extracted]*")
-            last_end = match.end()
-        parts.append(text[last_end:])
-        return "".join(parts)
+
 
     def _split_into_blocks(self, text):
         lines = text.split('\n')
@@ -279,6 +247,17 @@ class PaperTranslator:
             if '|' in line and len(line) > 5: in_table = True
             elif stripped == "": in_table = False
             
+            # [Fix] Explicitly separate headers
+            is_header = stripped.startswith("#") and not in_code and not in_math
+            
+            if is_header:
+                if current_block:
+                    content = "\n".join(current_block).strip()
+                    if content: blocks.append("\n".join(current_block))
+                    current_block = []
+                blocks.append(line)
+                continue
+
             current_block.append(line)
             
             if not in_table and not in_code and not in_math and stripped == "":
@@ -301,8 +280,41 @@ class PaperTranslator:
         if "vector/text - not extracted" in block.lower(): return False
         return True
 
+    def _call_groq_api(self, prompt):
+        """Fallback to Groq API"""
+        if not self.groq_api_key:
+            return None
+
+        self.logger.info("[INFO] Switching to Groq API (Fallback)...")
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3
+        }
+        
+        for attempt in range(3):
+            try:
+                response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers=headers,
+                    json=data,
+                    timeout=60
+                )
+                response.raise_for_status()
+                result = response.json()
+                return result['choices'][0]['message']['content']
+            except Exception as e:
+                self.logger.warning(f"[WARNING] Groq API Attempt {attempt+1} failed: {e}")
+                time.sleep(2)
+        self.logger.error(f"[ERROR] Groq API Failed after 3 attempts.")
+        return None
+
     def _call_gemini_sdk(self, prompt):
-        """Call Gemini via Google GenAI SDK"""
+        """Call Gemini via Google GenAI SDK with Groq Fallback"""
         if not self.client: return None
         
         for attempt in range(3):
@@ -314,9 +326,36 @@ class PaperTranslator:
                 )
                 if response.text:
                     return response.text
+                    
+            except ResourceExhausted:
+                self.logger.warning(f"[WARNING] Gemini Quota Exceeded (Attempt {attempt+1})")
+                
+                # Check if we should fallback to Groq immediately
+                groq_result = self._call_groq_api(prompt)
+                if groq_result:
+                    return groq_result
+                
+                # If Groq also fails or is not configured, re-raise as internal QuotaExceededError
+                # only if we want to stop completely. 
+                # But here we are in a retry loop.
+                # If Groq failed, we might want to wait and retry Gemini? 
+                # Or just give up? 
+                # Let's give up on this batch to fail fast if we really have no quota.
+                self.logger.error("[ERROR] Both Gemini and Groq failed (Quota/Error).")
+                raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
+
             except Exception as e:
+                # Check for 429 in string representation if not caught by ResourceExhausted
+                if "429" in str(e) or "ResourceExhausted" in str(e):
+                    self.logger.warning(f"[WARNING] Gemini Quota Exceeded (429 detected in generic error)")
+                    groq_result = self._call_groq_api(prompt)
+                    if groq_result:
+                        return groq_result
+                    raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
+                
                 self.logger.warning(f"API Error (Attempt {attempt+1}): {e}")
                 time.sleep(2 * (attempt + 1))
+        
         return None
 
     def _insert_frontmatter(self, text, pdf_path):
@@ -390,8 +429,7 @@ tags: [paper, {tag}]
             full_text = text_val[0] if isinstance(text_val, tuple) and len(text_val) >= 2 else str(text_val)
             
             # Post-Process Text
-            smart_image_map = self._extract_images(str(temp_pdf), output_dir)
-            full_text = self._inject_images(full_text, smart_image_map)
+            full_text = self._save_and_link_images(full_text, rendered.images, output_dir)
             full_text = self._clean_text_noise(full_text)
             full_text = self._force_normalize_headers(full_text)
             
@@ -454,7 +492,9 @@ tags: [paper, {tag}]
                     if block.strip() == trans_text.strip():
                         final_blocks.append(block)
                     else:
-                        final_blocks.append(f"{block}\n\n> {trans_text}")
+                        # [Fix] Properly quote multi-line translations
+                        quoted_trans = "\n> ".join(trans_text.splitlines())
+                        final_blocks.append(f"{block}\n\n> {quoted_trans}")
 
         # Final Assembly
         body = "\n\n".join(final_blocks)
@@ -474,7 +514,7 @@ tags: [paper, {tag}]
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(result_text)
             
-        self.logger.info(f"✅ Translated saved to: {output_path}")
+        self.logger.info(f"[SUCCESS] Translated saved to: {output_path}")
 
     def _process_batch(self, batch, ids, results):
         if not batch: return
@@ -494,6 +534,8 @@ SYSTEM_MODE: ACADEMIC_TRANSLATOR
 1. **Style:** Academic, formal.
 2. **Inline Math:** Keep inline LaTeX (`$...$`) EXACTLY as is.
 3. **No English:** Output ONLY Chinese.
+4. **Completeness:** Translate every sentence fully. Do not summarize or omit contributions.
+5. **Structure:** Maintain all original markdown structure (lists, bolding, etc.).
 
 **INPUT:**
 {prompt_text}
