@@ -17,6 +17,7 @@ class PaperDownloader:
         self.default_dir.mkdir(parents=True, exist_ok=True)
         self.papers_root = self.default_dir.parent
         self.folder_map = {
+            "Knowledge Distillation": ["Knowledge Distillation", "Distillation"],
             "Time Series": ["Time Series", "Forecasting", "Anomaly Detection"],
             "Computer Vision": ["Computer Vision", "Image", "Object Detection", "Segmentation"],
             "Natural Language Processing": ["NLP", "Language Model", "Text", "LLM"],
@@ -48,18 +49,33 @@ class PaperDownloader:
         
         text_to_check = title + " " + " ".join(fields)
 
-        # 2. 比對關鍵字
+        # 2. 比對關鍵字 (Priority 1: Keyword Match)
         for folder_name, keywords in self.folder_map.items():
             for kw in keywords:
                 if kw.lower() in text_to_check:
                     target_dir = self.papers_root / folder_name
-                    # 如果資料夾不存在，自動建立 (或視需求決定是否建立)
+                    # 如果資料夾不存在，自動建立
                     if not target_dir.exists():
-                        # 這裡選擇自動建立，確保分類成功
                         target_dir.mkdir(parents=True, exist_ok=True)
                     return target_dir
         
-        # 3. 沒對應到 -> 回傳 unclassified
+        # 3. [NEW] Dynamic Folder Creation (Priority 2: Field Match)
+        # 如果沒命中任何關鍵字，嘗試使用主要領域 (primary field) 建立資料夾
+        primary_field = None
+        if fields:
+            primary_field = fields[0] # 取第一個領域
+            
+        if primary_field:
+            # 簡單清理檔名 (移除不合法字元)
+            safe_field = re.sub(r'[\\/*?:"<>|]', "", primary_field).strip()
+            if safe_field:
+                target_dir = self.papers_root / safe_field
+                if not target_dir.exists():
+                    self.logger.info(f"[New Category] Creating new folder for field: {safe_field}")
+                    target_dir.mkdir(parents=True, exist_ok=True)
+                return target_dir
+
+        # 4. 真的沒救了 -> 回傳 unclassified
         return self.default_dir
     
     def _compress_pdf(self, input_path: Path) -> Path:
@@ -169,6 +185,7 @@ class PaperDownloader:
         except Exception as e:
             self.logger.warning(f"Organization step skipped: {e}")
 
+        title = paper_metadata.get('title', 'Untitled')
         self.logger.info(f"[TRANSLATING] Starting Native Python Translation: {title}...")
         try:
             self.translator.translate_paper(pdf_path, zh_md_path)
