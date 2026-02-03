@@ -63,7 +63,7 @@ python main.py
 2.  根據您的設定檔進行過濾與排序。
 3.  在 Obsidian 的每日資料夾中建立一份摘要筆記。
 4.  將 PDF 下載至對應的分類資料夾（例如 `Papers/Time Series`）。
-6.  呼叫 Python 翻譯核心，生成帶有 Dataview Metadata 的 `.zh.md` 翻譯檔案。
+5.  呼叫 Python 翻譯核心，生成帶有 Dataview Metadata 的 `.zh.md` 翻譯檔案。
 
 ### 手動翻譯
 

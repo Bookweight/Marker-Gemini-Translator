@@ -98,3 +98,49 @@ class ObsidianWriter:
         except Exception as e:
             self.logger.error(f"寫入筆記失敗: {e}")
             return False
+
+    def update_daily_link(self, paper_title: str, file_stem: str):
+        """
+        當論文下載/翻譯完成後，回頭更新每日筆記加上連結
+        """
+        import re
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"{today_str}.md"
+        file_path = self.daily_folder / filename
+        
+        if not file_path.exists():
+            return
+
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            new_lines = []
+            modified = False
+            target_found = False
+            
+            for line in lines:
+                # 尋找目標論文的那一行 (Matching Title)
+                # "- [ ] **Title**"
+                if f"**{paper_title}**" in line:
+                    target_found = True
+                    new_lines.append(line)
+                    continue
+                
+                # 如果找到了標題，接下來找 "Open on Semantic Scholar" 那一行加連結
+                if target_found and "Open on Semantic Scholar" in line:
+                    if "Read Paper (Local)" not in line:
+                        link_text = f" | [[{file_stem}.zh.md|Read Paper (Local)]]"
+                        line = line.rstrip() + link_text + "\n"
+                        modified = True
+                        self.logger.info(f"Added link for {paper_title}")
+                    target_found = False # Reset
+                
+                new_lines.append(line)
+                
+            if modified:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.writelines(new_lines)
+                    
+        except Exception as e:
+            self.logger.error(f"更新每日筆記連結失敗: {e}")

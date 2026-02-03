@@ -44,7 +44,7 @@ def main():
         harvester = NoteHarvester(config, client, profile_manager)
         ranker = PaperRanker(config)
         writer = ObsidianWriter(config)
-        downloader = PaperDownloader(config)
+        downloader = PaperDownloader(config, writer=writer)
 
         # 1.5 執行收割
         try:

@@ -8,17 +8,19 @@ from typing import List, Dict, Any
 from src.translator import PaperTranslator, QuotaExceededError
 
 class PaperDownloader:
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], writer=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
+        self.writer = writer
         self.vault_path = Path(config['obsidian']['vault_path'])
         unclassified_rel = config['obsidian'].get('unclassified_folder', 'Papers/unclassified')
         self.default_dir = self.vault_path / unclassified_rel
         self.default_dir.mkdir(parents=True, exist_ok=True)
         self.papers_root = self.default_dir.parent
         self.folder_map = {
+            "Anomaly Detection": ["Anomaly", "Anomaly Detection", "AD"],
             "Knowledge Distillation": ["Knowledge Distillation", "Distillation"],
-            "Time Series": ["Time Series", "Forecasting", "Anomaly Detection"],
+            "Time Series": ["Time Series", "Forecasting", "TS"],
             "Computer Vision": ["Computer Vision", "Image", "Object Detection", "Segmentation"],
             "Natural Language Processing": ["NLP", "Language Model", "Text", "LLM"],
             "Graph Neural Networks": ["Graph", "GNN", "Link Prediction"],
@@ -35,6 +37,42 @@ class PaperDownloader:
         # Initialize Translator
         self.translator = PaperTranslator(config)
         self.skip_translation = False
+
+# ... (skip to _run_translation_script)
+
+    def _run_translation_script(self, pdf_path: Path, paper_metadata: Dict):
+        """Invoke Python Translator directly"""
+        zh_md_path = pdf_path.with_suffix('.zh.md')
+        
+        # Metadata needed for link
+        title = paper_metadata.get('title', 'Untitled')
+        
+        if zh_md_path.exists():
+            self.logger.info(f"[SKIP] Translation exists: {zh_md_path.name}")
+            # Ensure link is updated even if skipped
+            if self.writer:
+                self.writer.update_daily_link(title, pdf_path.stem)
+            return
+            
+        # [Fix] Organize Folder First (Restore Structure)
+        try:
+            pdf_path = self.translator.organize_paper_folder(pdf_path)
+            # Update output path based on new location
+            zh_md_path = pdf_path.with_suffix('.zh.md')
+        except Exception as e:
+            self.logger.warning(f"Organization step skipped: {e}")
+
+        self.logger.info(f"[TRANSLATING] Starting Native Python Translation: {title}...")
+        try:
+            self.translator.translate_paper(pdf_path, zh_md_path)
+            # [NEW] Callback to update daily note
+            if self.writer and zh_md_path.exists():
+                self.writer.update_daily_link(title, pdf_path.stem)
+        except QuotaExceededError:
+            self.logger.error("[ERROR] Translation Quota Exceeded! Switching to 'Download Only' mode.")
+            raise  # Re-raise to be caught in process_papers
+        except Exception as e:
+            self.logger.error(f"Translation Crash: {e}", exc_info=True)
         
     def _determine_save_dir(self, paper: Dict[str, Any]) -> Path:
         """根據論文 Metadata 決定存檔資料夾"""
@@ -124,7 +162,7 @@ class PaperDownloader:
 
     def _download_pdf(self, url: str, title: str, target_dir: Path) -> Path: # [修改] 增加 target_dir 參數
         """下載單篇 PDF"""
-        safe_title = re.sub(r'[\\/*?:"<>|]', "", title)[:100].strip()
+        safe_title = re.sub(r'[\\/*?:"<>|]', "", title)[:50].strip()
         filename = f"{safe_title}.pdf"
         file_path = target_dir / filename # [修改] 使用傳入的資料夾
 

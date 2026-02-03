@@ -150,9 +150,10 @@ class PaperTranslator:
         new_text = re.sub(r'!\[(.*?)\]\((.*?)\)', replace_link, text)
         return new_text
 
-    def _clean_text_noise(self, text):
+    def _clean_text_noise(self, text, keep_page_tags=False):
         # [Fix] Remove Marker artifacts globally
-        text = re.sub(r'<span id="page-\d+-\d+"></span>', '', text)
+        if not keep_page_tags:
+            text = re.sub(r'<span id="page-\d+-\d+"></span>', '', text)
         text = re.sub(r'\[(\d+)\]\(#page-\d+-\d+\)', r'[\1]', text) # Keep citation number, remove link
         
         lines = text.split('\n')
@@ -314,8 +315,11 @@ class PaperTranslator:
         return None
 
     def _call_gemini_sdk(self, prompt):
-        """Call Gemini via Google GenAI SDK with Groq Fallback"""
+        """Call Gemini via Google GenAI SDK with Groq Fallback and Retry Backoff"""
         if not self.client: return None
+        
+        # [Fix] Exponential Backoff for Quota Limits
+        base_wait = 20 # Seconds
         
         for attempt in range(3):
             try:
@@ -328,33 +332,34 @@ class PaperTranslator:
                     return response.text
                     
             except ResourceExhausted:
-                self.logger.warning(f"[WARNING] Gemini Quota Exceeded (Attempt {attempt+1})")
+                wait_time = base_wait * (attempt + 1)
+                self.logger.warning(f"[WARNING] Gemini Quota Exceeded (Attempt {attempt+1}). Waiting {wait_time}s...")
+                time.sleep(wait_time)
                 
-                # Check if we should fallback to Groq immediately
-                groq_result = self._call_groq_api(prompt)
-                if groq_result:
-                    return groq_result
-                
-                # If Groq also fails or is not configured, re-raise as internal QuotaExceededError
-                # only if we want to stop completely. 
-                # But here we are in a retry loop.
-                # If Groq failed, we might want to wait and retry Gemini? 
-                # Or just give up? 
-                # Let's give up on this batch to fail fast if we really have no quota.
-                self.logger.error("[ERROR] Both Gemini and Groq failed (Quota/Error).")
-                raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
+                # If last attempt, try Groq Fallback
+                if attempt == 2:
+                     self.logger.warning(f"[FALLBACK] Gemini failed after retries. Trying Groq...")
+                     groq_result = self._call_groq_api(prompt)
+                     if groq_result: return groq_result
+                     
+                     # If Groq fails too
+                     raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
 
             except Exception as e:
                 # Check for 429 in string representation if not caught by ResourceExhausted
                 if "429" in str(e) or "ResourceExhausted" in str(e):
-                    self.logger.warning(f"[WARNING] Gemini Quota Exceeded (429 detected in generic error)")
-                    groq_result = self._call_groq_api(prompt)
-                    if groq_result:
-                        return groq_result
-                    raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
-                
-                self.logger.warning(f"API Error (Attempt {attempt+1}): {e}")
-                time.sleep(2 * (attempt + 1))
+                    wait_time = base_wait * (attempt + 1)
+                    self.logger.warning(f"[WARNING] Gemini Quota Exceeded (429 detected in generic error). Waiting {wait_time}s...")
+                    time.sleep(wait_time)
+                    
+                    if attempt == 2:
+                        self.logger.warning(f"[FALLBACK] Gemini failed after retries. Trying Groq...")
+                        groq_result = self._call_groq_api(prompt)
+                        if groq_result: return groq_result
+                        raise QuotaExceededError("Gemini Quota Exceeded and Groq Fallback failed/unavailable.")
+                else:
+                    self.logger.warning(f"API Error (Attempt {attempt+1}): {e}")
+                    time.sleep(2 * (attempt + 1))
         
         return None
 
@@ -403,6 +408,123 @@ tags: [paper, {tag}]
             self.logger.warning(f"Metadata error: {e}")
             return text
 
+    def _heuristic_check_structure(self, text):
+        """
+        Scans text for layout anomalies (e.g. Roman numeral disorder).
+        Returns a set of page numbers (integers) that are suspicious.
+        """
+        suspicious_pages = set()
+        
+        # 1. Split by Pages using Marker tags <span id="page-X-Y">
+        # We assume X is the page number.
+        page_pattern = re.compile(r'<span id="page-(\d+)-\d+"></span>')
+        parts = page_pattern.split(text)
+        # parts[0] is text before first page tag
+        # parts[1] is page num, parts[2] is text of that page...
+        
+        # Roman Numeral Pattern (I, II, III ... X)
+        # Regex to find top-level headers: ## I. INTRODUCTION
+        roman_header = re.compile(r'^##\s+([IXV]+)\.\s+', re.MULTILINE)
+        
+        last_roman_val = 0
+        
+        # Map roman to int
+        roman_map = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10}
+        
+        current_page_num = 1
+        
+        # Iterate through pages
+        # parts list: [pre_text, p_num_1, text_1, p_num_2, text_2, ...]
+        if len(parts) > 1:
+            # Skip parts[0]
+            for i in range(1, len(parts), 2):
+                try:
+                    p_num = int(parts[i])
+                except:
+                    p_num = current_page_num + 1
+                
+                content = parts[i+1]
+                
+                # Check Roman Headers in this page
+                matches = roman_header.finditer(content)
+                for m in matches:
+                    roman_str = m.group(1).upper()
+                    val = roman_map.get(roman_str, 99)
+                    
+                    if 0 < val < 20: # Sanity check
+                        # If we see a smaller number after a bigger number (e.g. III then II)
+                        # And it's not a restart (like references? no references usually don't have numbers)
+                        if val < last_roman_val:
+                            self.logger.warning(f"[CHECK] Found disorder: {roman_str} ({val}) after {last_roman_val} on Page {p_num}")
+                            suspicious_pages.add(p_num)
+                            suspicious_pages.add(p_num - 1) # Add previous page context
+                        last_roman_val = val
+                        
+                current_page_num = p_num
+
+        return suspicious_pages
+
+    def _repair_structure_with_llm(self, text, suspicious_pages):
+        """
+        Sends pages to LLM to fix reading order.
+        """
+        if not self.client:
+            self.logger.warning("Gemini SDK not available, skipping repair.")
+            return text
+            
+        page_pattern = re.compile(r'(<span id="page-(\d+)-\d+"></span>)')
+        
+        # We need to reconstruct the text page by page to target specific ones
+        # But regex split removes the delimiter. We want to keep it.
+        # Let's verify if we can just split and look at page numbers.
+        
+        parts = page_pattern.split(text) 
+        # parts: [pre, tag1, p1, content1, tag2, p2, content2 ... ]
+        
+        reconstructed_parts = [parts[0]]
+        
+        i = 1
+        while i < len(parts):
+            tag_full = parts[i]
+            p_num_str = parts[i+1]
+            content = parts[i+2]
+            
+            p_num = int(p_num_str)
+            
+            if p_num in suspicious_pages:
+                self.logger.info(f"[REPAIR] Repairing Page {p_num}...")
+                
+                # Construct Prompt
+                prompt = f"""
+SYSTEM_MODE: LAYOUT_REPAIR
+**TASK**: Fix the reading order of the following text.
+**CONTEXT**: The text comes from a PDF with a double-column layout. The parser sometimes mixes up the reading order (e.g., merging columns incorrectly, placing headers at the wrong bottom/top of the page).
+**INSTRUCTIONS**:
+1. Reorder the text to make it logically fast-flowing and coherent.
+2. **DO NOT TRANSLATE**. Keep ONLY English.
+3. **DO NOT SUMMARIZE**. Keep all original content.
+4. Return only the repaired Markdown text.
+
+**INPUT TEXT**:
+{content}
+"""
+                try:
+                    repaired_content = self._call_gemini_sdk(prompt)
+                    if repaired_content:
+                        content = repaired_content + "\n" # Add newline for safety
+                    else:
+                        self.logger.warning(f"Repair failed for Page {p_num} (No response), keeping original.")
+                except Exception as e:
+                    self.logger.error(f"Repair failed for Page {p_num}: {e}")
+            
+            # Reconstruct
+            reconstructed_parts.append(f'<span id="page-{p_num}-0"></span>') # Simplified tag restoration
+            reconstructed_parts.append(content)
+            
+            i += 3
+            
+        return "".join(reconstructed_parts)
+
     def translate_paper(self, pdf_path, output_path=None):
         pdf_path = Path(pdf_path)
         if not output_path:
@@ -430,7 +552,24 @@ tags: [paper, {tag}]
             
             # Post-Process Text
             full_text = self._save_and_link_images(full_text, rendered.images, output_dir)
-            full_text = self._clean_text_noise(full_text)
+            
+            # [Step 2.5] Structure Repair (Pre-processing Hybrid)
+            # 1. Clean noise but KEEP page tags for analysis
+            analyzable_text = self._clean_text_noise(full_text, keep_page_tags=True)
+            
+            # 2. Heuristic Check
+            suspicious_pages = self._heuristic_check_structure(analyzable_text)
+            
+            if suspicious_pages:
+                self.logger.warning(f"[STRUCTURE] Detected suspicious layout on pages: {suspicious_pages}")
+                # 3. Targeted LLM Repair
+                analyzable_text = self._repair_structure_with_llm(analyzable_text, suspicious_pages)
+                self.logger.info("[STRUCTURE] Repair completed.")
+            
+            # 4. Final Clean (Remove page tags)
+            full_text = self._clean_text_noise(analyzable_text, keep_page_tags=False)
+            
+            # full_text = self._clean_text_noise(full_text) # Replaced by flow above
             full_text = self._force_normalize_headers(full_text)
             
         except Exception as e:
@@ -453,7 +592,7 @@ tags: [paper, {tag}]
         current_batch = []
         current_batch_ids = []
         current_len = 0
-        all_translations = {}
+        all_batches = []
         
         for i, block in enumerate(blocks):
             if not self._is_translatable(block):
@@ -461,8 +600,7 @@ tags: [paper, {tag}]
                 
             block_len = len(block)
             if current_len + block_len > self.batch_size:
-                # Send Batch
-                self._process_batch(current_batch, current_batch_ids, all_translations)
+                all_batches.append((current_batch, current_batch_ids))
                 current_batch = []
                 current_batch_ids = []
                 current_len = 0
@@ -472,8 +610,52 @@ tags: [paper, {tag}]
             current_len += block_len
             
         if current_batch:
-            self._process_batch(current_batch, current_batch_ids, all_translations)
+            all_batches.append((current_batch, current_batch_ids))
+
+        # Parallel Execution
+        all_translations = {}
+        translation_failed = False
+        
+        if all_batches:
+            # [Debug] Log first 3 blocks to verify alignment
+            first_batch, first_ids = all_batches[0]
+            self.logger.info(f"[DEBUG] Batch 0 IDs: {first_ids}")
+            for k in range(min(3, len(first_batch))):
+                 self.logger.info(f"[DEBUG] ID_{first_ids[k]} Preview: {first_batch[k][:50]}...")
             
+            self.logger.info(f"Starting parallel translation for {len(all_batches)} batches (Max Workers: 2)...")
+            import concurrent.futures
+            
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    future_to_idf = {
+                        executor.submit(self._process_batch, batch, ids): (batch, ids) 
+                        for batch, ids in all_batches
+                    }
+                    
+                    for future in concurrent.futures.as_completed(future_to_idf):
+                        try:
+                            batch_results = future.result()
+                            if batch_results:
+                                all_translations.update(batch_results)
+                        except QuotaExceededError as e:
+                            self.logger.critical(f"[CRITICAL] Translation aborted due to Quota Limits: {e}")
+                            translation_failed = True
+                            # Cancel pending futures
+                            for f in future_to_idf:
+                                f.cancel()
+                            break
+                        except Exception as e:
+                            self.logger.error(f"Batch translation failed: {e}")
+                            
+            except Exception as e:
+                self.logger.error(f"Parallel execution error: {e}")
+                translation_failed = True
+
+        if translation_failed:
+            self.logger.error("[ABORTED] Translation process stopped due to critical errors. File NOT saved.")
+            return
+
         # Reconstruct
         for i, block in enumerate(blocks):
             trans_text = all_translations.get(i, "")
@@ -486,7 +668,7 @@ tags: [paper, {tag}]
                      clean_trans = re.sub(r'^#+\s*', '', trans_text).replace('\n', ' ').strip()
                      clean_trans = re.sub(r'<[^>]+>', '', clean_trans).strip()
                      clean_trans = re.sub(r'^([壹貳參肆伍陸柒捌玖拾甲乙丙丁戊]+[、.．])\s*', '', clean_trans).strip()
-                     final_blocks.append(f"{block.strip()} - {clean_trans}")
+                     final_blocks.append(f"{block.strip()}\n\n{clean_trans}")
                 else:
                     # [Fix] Deduplication
                     if block.strip() == trans_text.strip():
@@ -502,7 +684,9 @@ tags: [paper, {tag}]
         
         if post_text:
             # Fix references
-            post_text = re.sub(r'\n\s*-\s+(?!\[\d+\])(.*)', r' \1', post_text)
+            # Fix references
+            # [Fix] Removed aggressive merging of list items
+            # post_text = re.sub(r'\n\s*-\s+(?!\[\d+\])(.*)', r' \1', post_text)
             post_text = re.sub(r'(<span[^>]*>)?\s*\[\d+\]', r'\n\n\g<0>', post_text)
             post_text = re.sub(r'^\s*-\s*\[(\d+)\]', r'[\1]', post_text, flags=re.MULTILINE)
             post_text = re.sub(r'\n+\s*(\[\d+\])', r'\n\n\1', post_text)
@@ -516,8 +700,10 @@ tags: [paper, {tag}]
             
         self.logger.info(f"[SUCCESS] Translated saved to: {output_path}")
 
-    def _process_batch(self, batch, ids, results):
-        if not batch: return
+    def _process_batch(self, batch, ids):
+        if not batch: return {}
+        
+        results = {}
         prompt_text = ""
         for idx, text in zip(ids, batch):
             prompt_text += f"<<<ID_{idx}>>>\n{text}\n\n"
@@ -536,17 +722,35 @@ SYSTEM_MODE: ACADEMIC_TRANSLATOR
 3. **No English:** Output ONLY Chinese.
 4. **Completeness:** Translate every sentence fully. Do not summarize or omit contributions.
 5. **Structure:** Maintain all original markdown structure (lists, bolding, etc.).
+6. **IDs:** You must return the exact same IDs as provided. Do not skip any ID. If a block is empty or just a symbol, return it as is.
 
 **INPUT:**
+
 {prompt_text}
 """
-        response_text = self._call_gemini_sdk(prompt)
-        if response_text:
-            matches = re.finditer(r'<<<ID_(\d+)>>>\s*(.*?)(?=(<<<ID_|\Z))', response_text, re.DOTALL)
-            for match in matches:
-                mid = int(match.group(1))
-                content = match.group(2).strip()
-                results[mid] = content
+        try:
+            response_text = self._call_gemini_sdk(prompt)
+            if response_text:
+                matches = re.finditer(r'<<<ID_(\d+)>>>\s*(.*?)(?=(<<<ID_|\Z))', response_text, re.DOTALL)
+                for match in matches:
+                    mid = int(match.group(1))
+                    content = match.group(2).strip()
+                    if mid in ids:
+                        results[mid] = content
+                    else:
+                        self.logger.warning(f"[BATCH] Received unknown ID {mid}, ignoring.")
+            
+            # [Validation] Check for missing IDs
+            missing_ids = [i for i in ids if i not in results]
+            if missing_ids:
+                self.logger.warning(f"[BATCH] Missing IDs in response: {missing_ids}")
+                
+        except QuotaExceededError:
+            raise # Propagate up
+        except Exception as e:
+            self.logger.error(f"Error in batch processing: {e}")
+            
+        return results
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
