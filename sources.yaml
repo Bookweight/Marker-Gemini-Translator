@@ -1,0 +1,67 @@
+# CS Source Tier List & Filtering Configuration
+
+# Tier 1 Venues (Weight: 1.5)
+# Includes Top-tier conferences/journals (CCF A, CORE A*)
+tier_1:
+  - "cvpr"
+  - "iccv"
+  - "eccv"  # Often considered top tier in CV
+  - "neurips"
+  - "nips"  # Old name
+  - "icml"
+  - "iclr"
+  - "aaai"
+  - "ijcai"
+  - "acl"
+  - "siggraph"
+  - "kdd"
+  - "www"
+  - "sigcomm"
+  - "nsdi"
+  - "osdi"
+  - "sosp"
+  - "isca"
+  - "micro"
+  - "pldi"
+  - "popl"
+  - "stoc"
+  - "focs"
+  - "crypto"
+  - "ieee transactions on pattern analysis and machine intelligence" # TPAMI
+  - "international journal of computer vision" # IJCV
+  - "journal of machine learning research" # JMLR
+
+# Tier 2 Venues (Weight: 1.2)
+# Includes High-quality conferences/journals (CCF B, CORE A)
+tier_2:
+  - "emnlp"
+  - "naacl"
+  - "coling"
+  - "icra"
+  - "iros"
+  - "cikm"
+  - "wsdm"
+  - "icdm"
+  - "interspeech"
+  - "icassp"
+  - "miccai"
+  - "bmvc"
+  - "wacv"
+  - "aistats"
+  - "uai"
+
+# Blacklist (Weight: -10.0)
+# Predatory journals, fake conferences, or low-quality pay-to-publish venues
+blacklist:
+  - "international journal of computer science and network security"
+  - "global journal of computer science and technology"
+  - "international journal of advanced research in computer science"
+  - "international journal of scientific and technology research"
+  - "lambert academic publishing"
+  - "omics international"
+  - "waset"
+  - "iaeng"
+  - "scirp"
+  - "david publishing"
+  - "science publishing group"
+  - "iosr journals"

@@ -7,7 +7,6 @@ from pathlib import Path
 from src.client import S2Client
 from src.ranker import PaperRanker
 from src.writer import ObsidianWriter
-from src.harvester import NoteHarvester, ProfileManager
 from src.downloader import PaperDownloader
 
 # 設定 Logging (同時輸出到 Console 和 File)
@@ -40,21 +39,19 @@ def main():
         api_key = os.getenv("S2_API_KEY")
         
         client = S2Client(api_key, config)
-        profile_manager = ProfileManager()
-        harvester = NoteHarvester(config, client, profile_manager)
-        ranker = PaperRanker(config)
+        # Refactored: Ranker now handles Profile and Harvesting
+        ranker = PaperRanker(config, client)
         writer = ObsidianWriter(config)
         downloader = PaperDownloader(config, writer=writer)
 
         # 1.5 執行收割
         try:
-            harvester.harvest(lookback_days=7)
+            ranker.harvest_feedback(lookback_days=7)
         except Exception as e:
             logger.error(f"收割評分失敗，將使用舊有 Profile 繼續: {e}")
         
         # 2. 獲取候選
         keywords = config['search']['keywords']
-        # 確保 keywords 是列表，如果使用者只寫了一個字串，自動轉為列表
         if isinstance(keywords, str):
             keywords = [keywords]
             
@@ -66,6 +63,7 @@ def main():
         
         for topic in keywords:
             logger.info(f"  - 正在搜尋領域: {topic}...")
+            # Note: client usage remains same
             papers = client.search_papers(topic, years, limit=15)
             
             for p in papers:
@@ -77,7 +75,9 @@ def main():
         
         # 3. 過濾與排序
         whitelist = set(config['filters']['whitelist_fields'])
-        history_set = set(profile_manager.profile.get('history_ids', []))
+        # Access history from ranker's profile manager
+        history_set = set(ranker.profile_manager.profile.get('history_ids', []))
+        
         logger.info(f"目前歷史資料庫已有 {len(history_set)} 篇論文 (將被排除)")
         valid_ids = []
         for p in candidates:
@@ -90,17 +90,19 @@ def main():
                 
         logger.info(f"經過白名單過濾，準備抓取 {len(valid_ids)} 篇論文詳情")
         
-        user_vec = profile_manager.profile['user_vector']
         detailed_papers = client.get_batch_details(valid_ids)
         
-        top_papers = ranker.rank_candidates(detailed_papers, top_k=5, user_vector=user_vec)
+        # Refactored: rank_candidates uses internal profile, no need to pass user_vector
+        top_papers = ranker.rank_candidates(detailed_papers, top_k=5)
         
         # 4. 寫入介面
         if top_papers:
-            writer.write_recommendations(top_papers)
+            if writer.write_recommendations(top_papers):
+                # 成功寫入後，更新今日歷程 (避免重複推薦)
+                recommended_ids = [p['paperId'] for p in top_papers]
+                ranker.profile_manager.add_recommendations(recommended_ids)
 
-            recommended_ids = [p['paperId'] for p in top_papers]
-            profile_manager.add_recommendations(recommended_ids)
+
             logger.info("進入檔案檢查流程：確認 PDF 與翻譯是否齊全...")
             downloader.process_papers(top_papers)
             

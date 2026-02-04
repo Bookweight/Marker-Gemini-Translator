@@ -684,7 +684,6 @@ SYSTEM_MODE: LAYOUT_REPAIR
         
         if post_text:
             # Fix references
-            # Fix references
             # [Fix] Removed aggressive merging of list items
             # post_text = re.sub(r'\n\s*-\s+(?!\[\d+\])(.*)', r' \1', post_text)
             post_text = re.sub(r'(<span[^>]*>)?\s*\[\d+\]', r'\n\n\g<0>', post_text)
@@ -694,11 +693,52 @@ SYSTEM_MODE: LAYOUT_REPAIR
             
         # [Fix] Insert Metadata
         result_text = self._insert_frontmatter(result_text, pdf_path)
+        
+        # [Fix-V30] Post-Processing Cleaning
+        result_text = self._clean_metadata(result_text)
             
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(result_text)
             
         self.logger.info(f"[SUCCESS] Translated saved to: {output_path}")
+
+    def _clean_metadata(self, text):
+        """
+        Cleans up translation artifacts, PDF links, and HTML entities.
+        """
+        # 1. Remove PDF Internal Links: [Link](#page-8-0) or (#page-8-0)
+        text = re.sub(r'\[(.*?)\]\(#page-\d+-\d+\)', r'\1', text)
+        text = re.sub(r'\(#page-\d+-\d+\)', '', text)
+        
+        # 2. Remove "Cited on page X" noise
+        # Pattern: (Cited on page [2](#page-1-3)) or just (Cited on page 2)
+        text = re.sub(r'\s*\(Cited on page.*?\)', '', text)
+        
+        # 3. Fix HTML Entities
+        replacements = {
+            '&lt;': '<',
+            '&gt;': '>',
+            '&amp;': '&',
+            '<sup>&</sup>lt;sup>': '<sup>', # Specific artifact seen in bug report
+            '&quot;': '"',
+            '&apos;': "'"
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+            
+        # 4. Remove duplicate Author lines if adjacent (Header vs Content)
+        # Simple heuristic: if line N is identical to line N-2 (ignoring md syntax)
+        lines = text.split('\n')
+        cleaned_lines = []
+        for i, line in enumerate(lines):
+            # Check if this line repeats a recent header
+            if i > 1 and len(line.strip()) > 3:
+                prev_header = lines[i-2].strip().replace('#', '').strip()
+                if line.strip() == prev_header:
+                    continue # Skip duplicate
+            cleaned_lines.append(line)
+            
+        return '\n'.join(cleaned_lines)
 
     def _process_batch(self, batch, ids):
         if not batch: return {}

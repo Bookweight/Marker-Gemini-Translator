@@ -118,7 +118,7 @@ class S2Client:
         endpoint = "/paper/batch"
         
         # 指定需要的欄位
-        fields = "paperId,title,year,influentialCitationCount,citationCount,fieldsOfStudy,abstract,embedding.specter_v2,openAccessPdf,externalIds"
+        fields = "paperId,title,year,influentialCitationCount,citationCount,fieldsOfStudy,abstract,embedding.specter_v2,openAccessPdf,externalIds,venue,publicationVenue,journal"
         
         params = {"fields": fields}
         
