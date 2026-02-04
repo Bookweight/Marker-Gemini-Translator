@@ -1,6 +1,23 @@
 # Paper Reading Assistant
 
-[English](README.md) | [繁體中文](README.zh-TW.md)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?style=flat-square&logo=python)
+![Gemini](https://img.shields.io/badge/AI-Gemini%202.0-purple?style=flat-square&logo=google-gemini)
+![Obsidian](https://img.shields.io/badge/Obsidian-Integrated-7c3aed?style=flat-square&logo=obsidian)
+
+<div style="background: #e5e7eb; border-radius: 9999px; padding: 2px; width: fit-content; min-width: 180px; position: relative; display: flex; align-items: center;">
+  <!-- Glider Background (Absolute) -->
+  <div style="position: absolute; left: 2px; top: 2px; bottom: 2px; width: calc(50% - 2px); background: #10b981; border-radius: 9999px; z-index: 1;"></div>
+  
+  <!-- Active Text (English) -->
+  <div style="flex: 1; position: relative; z-index: 2; text-align: center; padding: 6px 16px;">
+    <span style="color: white; font-weight: 600; font-family: system-ui, -apple-system, sans-serif; font-size: 14px; display: block;">English</span>
+  </div>
+  
+  <!-- Inactive Link (Chinese) -->
+  <a href="README.zh-TW.md" style="flex: 1; position: relative; z-index: 2; text-align: center; text-decoration: none; padding: 6px 16px; display: block;">
+    <span style="color: #4b5563; font-weight: 500; font-family: system-ui, -apple-system, sans-serif; font-size: 14px;">繁體中文</span>
+  </a>
+</div>
 
 An automated tool to discover, download, and translate academic papers for your Obsidian knowledge base.
 
@@ -34,6 +51,9 @@ An automated tool to discover, download, and translate academic papers for your 
 
 ## Setup
 
+<details>
+<summary><strong>Click to expand installation interactions</strong></summary>
+
 1.  **Prerequisites**
     *   Python 3.8+
     *   [Semantic Scholar API Key](https://www.semanticscholar.org/product/api)
@@ -49,6 +69,8 @@ An automated tool to discover, download, and translate academic papers for your 
         *   `obsidian.vault_path`: Path to your Obsidian vault.
         *   `search.keywords`: List of topics to search for.
         *   `translation.model`: Gemini Model to use (e.g., `gemini-2.0-flash-exp`).
+
+</details>
 
 ## Usage
 
