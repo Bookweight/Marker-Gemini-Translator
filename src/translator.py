@@ -594,6 +594,11 @@ SYSTEM_MODE: LAYOUT_REPAIR
         else:
             output_path = Path(output_path)
 
+        # Guard against missing Marker details
+        if not MARKER_AVAILABLE or not hasattr(self, "converter"):
+            self.logger.error("Marker configuration missing. Skipping translation.")
+            return
+
         # 1. Temp file handling for Long Paths / Stability
         temp_dir = Path(os.getenv("TEMP"))
         temp_pdf = temp_dir / "process_paper.pdf"

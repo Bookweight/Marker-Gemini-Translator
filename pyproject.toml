@@ -6,7 +6,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "google-api-core>=2.29.0",
+    "google-genai>=1.62.0",
     "markdown>=3.9",
+    "marker-pdf>=1.10.2",
     "markitdown[pdf]>=0.1.4",
     "numpy>=2.0.2",
     "pymupdf4llm>=0.2.9",
