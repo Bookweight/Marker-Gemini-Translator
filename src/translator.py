@@ -30,7 +30,7 @@ except ImportError:
 
 # Try importing google-genai
 try:
-    from google import genai
+    from google import genai  # type: ignore
     from google.api_core.exceptions import ResourceExhausted
 
     SDK_AVAILABLE = True
