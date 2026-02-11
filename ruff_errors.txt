@@ -1,0 +1,397 @@
+﻿E501 Line too long (94 > 88)
+   --> legacy_code\paper_translator.py:170:89
+    |
+169 | **FORMATTING RULES:**
+170 | 1. **Bilingual:** Original English Paragraph -> Empty Line -> Traditional Chinese Translation.
+    |                                                                                         ^^^^^^
+171 | 2. **Structure:** - Main Header: `## Original - 銝剜?`
+172 |    - Sub-Header: `### 銝剜?` (Chinese Only)
+    |
+
+E501 Line too long (99 > 88)
+   --> legacy_code\paper_translator.py:175:89
+    |
+173 | 3. **Tables (HTML):** - Use `<table>` syntax for ALL tables.
+174 |    - Keep content **100% ENGLISH**.
+175 | 4. **Math:** Detect broken math (e.g. "x 2") and repair to LaTeX (`$x^2$`). Keep variables English.
+    |                                                                                         ^^^^^^^^^^^
+176 |
+177 | **CONTENT:**
+    |
+
+E501 Line too long (92 > 88)
+   --> legacy_code\paper_translator_v6.py:185:89
+    |
+183 |                 new_lines.append(line)
+184 |
+185 |         # [Fix] Post-process: Check if the last added line is a header that absorbed content
+    |                                                                                         ^^^^
+186 |         # e.g. "## Abstract***?his paper..." -> "## Abstract" + "This paper..."
+187 |         last_line = new_lines[-1]
+    |
+
+F841 Local variable `separator` is assigned to but never used
+   --> legacy_code\paper_translator_v6.py:195:17
+    |
+193 |                 # Check if the "Heading Part" is a known special header or short enough
+194 |                 heading_text = header_match.group(2).strip()
+195 |                 separator = header_match.group(3)
+    |                 ^^^^^^^^^
+196 |                 body_text = header_match.group(4).strip()
+    |
+help: Remove assignment to unused variable `separator`
+
+E501 Line too long (93 > 88)
+   --> legacy_code\paper_translator_v6.py:212:89
+    |
+210 | def inject_images_sync_filter(text, image_map):
+211 |     """??瘜典 (V26 Logic)"""
+212 |     # [Fix] Broadened regex to catch variations like "filename_page_1_Image_0.png" or similar
+    |                                                                                         ^^^^^
+213 |     pattern = re.compile(r"!\[(.*?)\]\(.*?_page_(\d+).*?\)")
+214 |     parts = []
+    |
+
+E501 Line too long (92 > 88)
+   --> legacy_code\paper_translator_v6.py:221:89
+    |
+219 |         parts.append(text[last_end : match.start()])
+220 |         alt = match.group(1) or "Figure"
+221 |         # [Fix] Updated group index to 2 because we removed one capturing group in the regex
+    |                                                                                         ^^^^
+222 |         page_idx = int(match.group(2))
+    |
+
+F841 Local variable `batch_start_index` is assigned to but never used
+   --> legacy_code\paper_translator_v6.py:432:5
+    |
+430 |     current_batch = []
+431 |     current_batch_len = 0
+432 |     batch_start_index = 0
+    |     ^^^^^^^^^^^^^^^^^
+433 |
+434 |     # ?ㄐ??閬???Map 靘??鈭?ID 鋡怨歲????    |
+help: Remove assignment to unused variable `batch_start_index`
+
+E501 Line too long (108 > 88)
+   --> legacy_code\paper_translator_v6.py:521:89
+    |
+519 |                     .strip()
+520 |                 )
+521 |                 # [Fix] Remove HTML tags from translated header to prevent duplication (e.g. <span...>Title)
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^
+522 |                 clean_trans = re.sub(r"<[^>]+>", "", clean_trans).strip()
+523 |                 # [Fix] Strip ONLY Chinese numbering artifacts (e.g. "憯嫘?, "?脯?) per user request.
+    |
+
+E501 Line too long (102 > 88)
+   --> legacy_code\paper_translator_v6.py:523:85
+    |
+521 |                 # [Fix] Remove HTML tags from translated header to prevent duplication (e.g. <span...>Title)
+522 |                 clean_trans = re.sub(r"<[^>]+>", "", clean_trans).strip()
+523 |                 # [Fix] Strip ONLY Chinese numbering artifacts (e.g. "憯嫘?, "?脯?) per user request.
+    |                                                                                         ^^^^^^^^^^^^^^
+524 |                 # Left digits and Roman numerals alone to avoid removing useful content.
+525 |                 clean_trans = re.sub(
+    |
+
+E501 Line too long (105 > 88)
+   --> legacy_code\paper_translator_v6.py:545:89
+    |
+544 |     if post_text:
+545 |         # [Fix] 1. Join broken lines where a sentence was split into a list item (e.g. "useful\n - life")
+    |                                                                                         ^^^^^^^^^^^^^^^^^
+546 |         # Match newline followed by "- " and NOT followed by "[n]" (negative lookahead)
+547 |         post_text = re.sub(r"\n\s*-\s+(?!\[\d+\])(.*)", r" \1", post_text)
+    |
+
+E501 Line too long (98 > 88)
+   --> legacy_code\paper_translator_v6.py:554:89
+    |
+552 |         post_text = re.sub(r"(<span[^>]*>)?\s*\[\d+\]", r"\n\n\g<0>", post_text)
+553 |
+554 |         # [Fix] 2. Repair reference list formatting: "- [1]" -> "[1]" to avoid checklist rendering
+    |                                                                                         ^^^^^^^^^^
+555 |         post_text = re.sub(r"^\s*-\s*\[(\d+)\]", r"[\1]", post_text, flags=re.MULTILINE)
+    |
+
+E501 Line too long (177 > 88)
+   --> src\client.py:142:89
+    |
+141 | ??142 | ?夷onCount,fieldsOfStudy,abstract,embedding.specter_v2,openAccessPdf,externalIds,venue,publicationVenue,journal"
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+143 | ??144 | ??    |
+
+E501 Line too long (95 > 88)
+   --> src\client.py:159:85
+    |
+157 |             try:
+158 |                 self.logger.debug(
+159 |                     f"???寞活 {i // self.batch_size + 1}/{total_batches} (Size: {len(chunk)})"
+    |                                                                                         ^^^^^^^
+160 |                 )
+161 |                 result = self._make_request(
+    |
+
+E501 Line too long (106 > 88)
+   --> src\downloader.py:146:89
+    |
+145 |         self.logger.warning(
+146 |             f"[WARNING] File too large ({file_size_mb:.2f} MB), attempting to compress: {input_path.name}"
+    |                                                                                         ^^^^^^^^^^^^^^^^^^
+147 |         )
+    |
+
+E501 Line too long (109 > 88)
+   --> src\downloader.py:173:89
+    |
+171 |             else:
+172 |                 self.logger.warning(
+173 |                     f"[WARNING] Still too large after compression ({new_size:.2f} MB), translation may fail."
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^
+174 |                 )
+175 |                 temp_output.unlink()
+    |
+
+E501 Line too long (144 > 88)
+   --> src\downloader.py:204:89
+    |
+202 | ??203 | ??204 | ?存 NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+205 | ??206 | ?圯aders, stream=True, timeout=60)
+    |
+
+E501 Line too long (113 > 88)
+   --> src\downloader.py:269:89
+    |
+267 |                         self.skip_translation = True
+268 |                         self.logger.warning(
+269 |                             "[WARNING] Global Translation Quota Hit. Disabling translation for remaining papers."
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+270 |                         )
+    |
+
+E501 Line too long (94 > 88)
+   --> src\ranker.py:412:65
+    |
+411 |         # ?芸??瘥?Cluster ??擃? (??蝪∪?風嚗Ⅱ靽???label ?喳?銝蝭?
+412 |         # ? candidate_pool 撌脩??舐??????隞亦洵銝甈⊿??唳? label 撠望閰?label ?擃???    |                                                                                         ^^^^^^
+413 |         for i in valid_indices:
+414 |             label = labels[valid_indices.index(i)]
+    |
+
+F401 `google.genai.types` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> src\translator.py:35:30
+   |
+33 |     from google import genai
+34 |     from google.api_core.exceptions import ResourceExhausted
+35 |     from google.genai import types
+   |                              ^^^^^
+36 |
+37 |     SDK_AVAILABLE = True
+   |
+help: Remove unused import: `google.genai.types`
+
+E501 Line too long (92 > 88)
+  --> src\translator.py:64:89
+   |
+62 |         else:
+63 |             self.logger.warning(
+64 |                 "[WARNING] GEMINI_API_KEY not found or SDK missing. Translation might fail."
+   |                                                                                         ^^^^
+65 |             )
+   |
+
+E501 Line too long (101 > 88)
+   --> src\translator.py:368:89
+    |
+366 |                 wait_time = base_wait * (attempt + 1)
+367 |                 self.logger.warning(
+368 |                     f"[WARNING] Gemini Quota Exceeded (Attempt {attempt+1}). Waiting {wait_time}s..."
+    |                                                                                         ^^^^^^^^^^^^^
+369 |                 )
+370 |                 time.sleep(wait_time)
+    |
+
+E501 Line too long (91 > 88)
+   --> src\translator.py:387:89
+    |
+386 |             except Exception as e:
+387 |                 # Check for 429 in string representation if not caught by ResourceExhausted
+    |                                                                                         ^^^
+388 |                 if "429" in str(e) or "ResourceExhausted" in str(e):
+389 |                     wait_time = base_wait * (attempt + 1)
+    |
+
+E501 Line too long (115 > 88)
+   --> src\translator.py:391:89
+    |
+389 |                     wait_time = base_wait * (attempt + 1)
+390 |                     self.logger.warning(
+391 |                         f"[WARNING] Gemini Quota Exceeded (429 detected in generic error). Waiting {wait_time}s..."
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+392 |                     )
+393 |                     time.sleep(wait_time)
+    |
+
+E501 Line too long (89 > 88)
+   --> src\translator.py:403:89
+    |
+401 |                             return groq_result
+402 |                         raise QuotaExceededError(
+403 |                             "Gemini Quota Exceeded and Groq Fallback failed/unavailable."
+    |                                                                                         ^
+404 |                         )
+405 |                 else:
+    |
+
+E501 Line too long (92 > 88)
+   --> src\translator.py:423:89
+    |
+421 |             if "Papers" in parts:
+422 |                 idx = parts.index("Papers")
+423 |                 # field is the folder strictly inside "Papers" (e.g. Papers/Time Series/...)
+    |                                                                                         ^^^^
+424 |                 if idx + 1 < len(parts):
+425 |                     field = parts[idx + 1]
+    |
+
+E501 Line too long (93 > 88)
+   --> src\translator.py:512:89
+    |
+511 |                     if 0 < val < 20:  # Sanity check
+512 |                         # If we see a smaller number after a bigger number (e.g. III then II)
+    |                                                                                         ^^^^^
+513 |                         # And it's not a restart (like references? no references usually don't have numbers)
+514 |                         if val < last_roman_val:
+    |
+
+E501 Line too long (108 > 88)
+   --> src\translator.py:513:89
+    |
+511 |                     if 0 < val < 20:  # Sanity check
+512 |                         # If we see a smaller number after a bigger number (e.g. III then II)
+513 |                         # And it's not a restart (like references? no references usually don't have numbers)
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^
+514 |                         if val < last_roman_val:
+515 |                             self.logger.warning(
+    |
+
+E501 Line too long (117 > 88)
+   --> src\translator.py:516:89
+    |
+514 |                         if val < last_roman_val:
+515 |                             self.logger.warning(
+516 |                                 f"[CHECK] Found disorder: {roman_str} ({val}) after {last_roman_val} on Page {p_num}"
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+517 |                             )
+518 |                             suspicious_pages.add(p_num)
+    |
+
+F841 Local variable `tag_full` is assigned to but never used
+   --> src\translator.py:547:13
+    |
+545 |         i = 1
+546 |         while i < len(parts):
+547 |             tag_full = parts[i]
+    |             ^^^^^^^^
+548 |             p_num_str = parts[i + 1]
+549 |             content = parts[i + 2]
+    |
+help: Remove assignment to unused variable `tag_full`
+
+E501 Line too long (205 > 88)
+   --> src\translator.py:560:89
+    |
+558 | ??559 | ??560 | ?妃etimes mixes up the reading order (e.g., merging columns incorrectly, placing headers at the wrong bottom/top of the page).
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+561 | ??562 | ??    |
+
+E501 Line too long (94 > 88)
+   --> src\translator.py:576:89
+    |
+574 |                     else:
+575 |                         self.logger.warning(
+576 |                             f"Repair failed for Page {p_num} (No response), keeping original."
+    |                                                                                         ^^^^^^
+577 |                         )
+578 |                 except Exception as e:
+    |
+
+E501 Line too long (90 > 88)
+   --> src\translator.py:634:89
+    |
+632 |             if suspicious_pages:
+633 |                 self.logger.warning(
+634 |                     f"[STRUCTURE] Detected suspicious layout on pages: {suspicious_pages}"
+    |                                                                                         ^^
+635 |                 )
+636 |                 # 3. Targeted LLM Repair
+    |
+
+E501 Line too long (99 > 88)
+   --> src\translator.py:704:89
+    |
+703 |             self.logger.info(
+704 |                 f"Starting parallel translation for {len(all_batches)} batches (Max Workers: 2)..."
+    |                                                                                         ^^^^^^^^^^^
+705 |             )
+706 |             import concurrent.futures
+    |
+
+E501 Line too long (90 > 88)
+   --> src\translator.py:722:89
+    |
+720 |                         except QuotaExceededError as e:
+721 |                             self.logger.critical(
+722 |                                 f"[CRITICAL] Translation aborted due to Quota Limits: {e}"
+    |                                                                                         ^^
+723 |                             )
+724 |                             translation_failed = True
+    |
+
+E501 Line too long (95 > 88)
+   --> src\translator.py:738:89
+    |
+736 |         if translation_failed:
+737 |             self.logger.error(
+738 |                 "[ABORTED] Translation process stopped due to critical errors. File NOT saved."
+    |                                                                                         ^^^^^^^
+739 |             )
+740 |             return
+    |
+
+E501 Line too long (92 > 88)
+   --> src\translator.py:855:89
+    |
+853 | 2. **Inline Math:** Keep inline LaTeX (`$...$`) EXACTLY as is.
+854 | 3. **No English:** Output ONLY Chinese.
+855 | 4. **Completeness:** Translate every sentence fully. Do not summarize or omit contributions.
+    |                                                                                         ^^^^
+856 | 5. **Structure:** Maintain all original markdown structure (lists, bolding, etc.).
+857 | 6. **IDs:** You must return the exact same IDs as provided. Do not skip any ID. If a block is empty or just a symbol, return it as is.
+    |
+
+E501 Line too long (134 > 88)
+   --> src\translator.py:857:89
+    |
+855 | 4. **Completeness:** Translate every sentence fully. Do not summarize or omit contributions.
+856 | 5. **Structure:** Maintain all original markdown structure (lists, bolding, etc.).
+857 | 6. **IDs:** You must return the exact same IDs as provided. Do not skip any ID. If a block is empty or just a symbol, return it as is.
+    |                                                                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+858 |
+859 | **INPUT:**
+    |
+
+E501 Line too long (100 > 88)
+  --> src\writer.py:60:89
+   |
+58 |         content.append("> [!INFO] System Status")
+59 |         content.append(
+60 |             f"> **Mode**: Classic First | **Source**: Semantic Scholar | **Items**: {len(papers)}\n"
+   |                                                                                         ^^^^^^^^^^^^
+61 |         )
+   |
+
+Found 38 errors.
+No fixes available (3 hidden fixes can be enabled with the `--unsafe-fixes` option).

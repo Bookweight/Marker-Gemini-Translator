@@ -24,11 +24,12 @@ An automated tool to discover, download, and translate academic papers for your 
 ## Features
 
 *   **Smart Discovery**: Searches Semantic Scholar for papers based on configured keywords and year ranges.
-*   **Personalized Ranking**: Ranks papers based on your reading history and preferences using vector similarity.
+*   **Personalized Ranking**: Ranks papers using vector similarity, **Recency Bonus** (prioritizing fresh research), and **Venue Weighting** (boosting top-tier sources).
 *   **Automated Downloading**: Automatically downloads open-access PDFs or attempts retrieval via ArXiv.
 *   **Intelligent Organization**: Categorizes papers into folders (e.g., Computer Vision, NLP, Time Series) based on their fields of study.
-*   **AI-Powered Translation**: Uses **Google Gemini** (via Python SDK) to generate high-quality, academic translations of the abstract and key sections.
-*   **Obsidian Integration**: Generates daily recommendation notes and injects Dataview-compatible metadata (YAML frontmatter) into translated files.
+*   **AI-Powered Translation**: Uses **Google Gemini** to generate high-quality academic translations.
+*   **Clean Output**: Automatically removes PDF artifacts (e.g., page numbers, internal links) for a smooth reading experience.
+*   **Obsidian Integration**: Generates daily recommendation notes and injects Dataview-compatible metadata.
 *   **Hybrid Workflow**: Supports both automated daily batch processing and manual single-file translation.
 
 ## Project Structure
@@ -43,8 +44,7 @@ An automated tool to discover, download, and translate academic papers for your 
 │   ├── translator.py       # Core Translation Logic (Integrates Gemini SDK & Marker)
 │   ├── downloader.py       # PDF downloader and translation trigger
 │   ├── client.py           # Semantic Scholar API client
-│   ├── harvester.py        # User profile and history manager
-│   ├── ranker.py           # Paper ranking logic
+│   ├── ranker.py           # Ranking, User Profiling, and Feedback Harvesting
 │   └── writer.py           # Obsidian note writer
 └── scripts/                # (Legacy) PowerShell helper scripts
 ```

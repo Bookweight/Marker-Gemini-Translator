@@ -1,27 +1,36 @@
 import logging
-import requests
-import time
 import re
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import requests
 from pypdf import PdfReader, PdfWriter
-from typing import List, Dict, Any
+
 from src.translator import PaperTranslator, QuotaExceededError
+
 
 class PaperDownloader:
     def __init__(self, config: Dict[str, Any], writer=None):
         self.logger = logging.getLogger(__name__)
         self.config = config
         self.writer = writer
-        self.vault_path = Path(config['obsidian']['vault_path'])
-        unclassified_rel = config['obsidian'].get('unclassified_folder', 'Papers/unclassified')
-        self.default_dir = self.vault_path / unclassified_rel
+        self.vault_path: Path = Path(config["obsidian"]["vault_path"])
+        unclassified_rel = config["obsidian"].get(
+            "unclassified_folder", "Papers/unclassified"
+        )
+        self.default_dir: Path = self.vault_path / str(unclassified_rel)
         self.default_dir.mkdir(parents=True, exist_ok=True)
-        self.papers_root = self.default_dir.parent
+        self.papers_root: Path = self.default_dir.parent
         self.folder_map = {
             "Anomaly Detection": ["Anomaly", "Anomaly Detection", "AD"],
             "Knowledge Distillation": ["Knowledge Distillation", "Distillation"],
             "Time Series": ["Time Series", "Forecasting", "TS"],
-            "Computer Vision": ["Computer Vision", "Image", "Object Detection", "Segmentation"],
+            "Computer Vision": [
+                "Computer Vision",
+                "Image",
+                "Object Detection",
+                "Segmentation",
+            ],
             "Natural Language Processing": ["NLP", "Language Model", "Text", "LLM"],
             "Graph Neural Networks": ["Graph", "GNN", "Link Prediction"],
             "Recommendation System": ["Recommendation", "Recommender"],
@@ -32,59 +41,63 @@ class PaperDownloader:
             "Sentiment Analysis": ["Sentiment"],
             "Point Cloud Registration": ["Point Cloud"],
             "Hearing Loss Simulation": ["Hearing", "Audio"],
-            "Database": ["Database"]
+            "Database": ["Database"],
         }
         # Initialize Translator
         self.translator = PaperTranslator(config)
         self.skip_translation = False
 
-# ... (skip to _run_translation_script)
+    # ... (skip to _run_translation_script)
 
     def _run_translation_script(self, pdf_path: Path, paper_metadata: Dict):
         """Invoke Python Translator directly"""
-        zh_md_path = pdf_path.with_suffix('.zh.md')
-        
+        zh_md_path = pdf_path.with_suffix(".zh.md")
+
         # Metadata needed for link
-        title = paper_metadata.get('title', 'Untitled')
-        
+        title = paper_metadata.get("title", "Untitled")
+
         if zh_md_path.exists():
             self.logger.info(f"[SKIP] Translation exists: {zh_md_path.name}")
             # Ensure link is updated even if skipped
             if self.writer:
                 self.writer.update_daily_link(title, pdf_path.stem)
             return
-            
+
         # [Fix] Organize Folder First (Restore Structure)
         try:
             pdf_path = self.translator.organize_paper_folder(pdf_path)
             # Update output path based on new location
-            zh_md_path = pdf_path.with_suffix('.zh.md')
+            zh_md_path = pdf_path.with_suffix(".zh.md")
         except Exception as e:
             self.logger.warning(f"Organization step skipped: {e}")
 
-        self.logger.info(f"[TRANSLATING] Starting Native Python Translation: {title}...")
+        self.logger.info(
+            f"[TRANSLATING] Starting Native Python Translation: {title}..."
+        )
         try:
             self.translator.translate_paper(pdf_path, zh_md_path)
             # [NEW] Callback to update daily note
             if self.writer and zh_md_path.exists():
                 self.writer.update_daily_link(title, pdf_path.stem)
         except QuotaExceededError:
-            self.logger.error("[ERROR] Translation Quota Exceeded! Switching to 'Download Only' mode.")
+            self.logger.error(
+                "[ERROR] Translation Quota Exceeded! Switching to 'Download Only' mode."
+            )
             raise  # Re-raise to be caught in process_papers
         except Exception as e:
             self.logger.error(f"Translation Crash: {e}", exc_info=True)
-        
+
     def _determine_save_dir(self, paper: Dict[str, Any]) -> Path:
         """根據論文 Metadata 決定存檔資料夾"""
-        
+
         # 1. 準備檢查的文字 (標題 + 領域標籤)
-        title = paper.get('title', '').lower()
-        fields = [f.lower() for f in (paper.get('fieldsOfStudy') or [])]
+        title = paper.get("title", "").lower()
+        fields = [f.lower() for f in (paper.get("fieldsOfStudy") or [])]
         # 有些論文只有 s2FieldsOfStudy
         if not fields:
-            s2_fields = paper.get('s2FieldsOfStudy') or []
-            fields = [f['category'].lower() for f in s2_fields]
-        
+            s2_fields = paper.get("s2FieldsOfStudy") or []
+            fields = [f["category"].lower() for f in s2_fields]
+
         text_to_check = title + " " + " ".join(fields)
 
         # 2. 比對關鍵字 (Priority 1: Keyword Match)
@@ -96,26 +109,28 @@ class PaperDownloader:
                     if not target_dir.exists():
                         target_dir.mkdir(parents=True, exist_ok=True)
                     return target_dir
-        
+
         # 3. [NEW] Dynamic Folder Creation (Priority 2: Field Match)
         # 如果沒命中任何關鍵字，嘗試使用主要領域 (primary field) 建立資料夾
         primary_field = None
         if fields:
-            primary_field = fields[0] # 取第一個領域
-            
+            primary_field = fields[0]  # 取第一個領域
+
         if primary_field:
             # 簡單清理檔名 (移除不合法字元)
             safe_field = re.sub(r'[\\/*?:"<>|]', "", primary_field).strip()
             if safe_field:
                 target_dir = self.papers_root / safe_field
                 if not target_dir.exists():
-                    self.logger.info(f"[New Category] Creating new folder for field: {safe_field}")
+                    self.logger.info(
+                        f"[New Category] Creating new folder for field: {safe_field}"
+                    )
                     target_dir.mkdir(parents=True, exist_ok=True)
                 return target_dir
 
         # 4. 真的沒救了 -> 回傳 unclassified
         return self.default_dir
-    
+
     def _compress_pdf(self, input_path: Path) -> Path:
         """
         [新增] 簡單的 PDF 壓縮/重寫邏輯
@@ -126,78 +141,89 @@ class PaperDownloader:
         file_size_mb = input_path.stat().st_size / (1024 * 1024)
         if file_size_mb < 20:
             return input_path
-            
-        self.logger.warning(f"[WARNING] File too large ({file_size_mb:.2f} MB), attempting to compress: {input_path.name}")
-        
+
+        self.logger.warning(
+            f"[WARNING] File too large ({file_size_mb:.2f} MB), attempting to compress: {input_path.name}"
+        )
+
         try:
             reader = PdfReader(input_path)
             writer = PdfWriter()
-            
+
             for page in reader.pages:
                 writer.add_page(page)
-                
+
             # 加入壓縮參數
             for page in writer.pages:
                 page.compress_content_streams()  # 壓縮內容流
-                
-            temp_output = input_path.with_suffix('.compressed.pdf')
+
+            temp_output = input_path.with_suffix(".compressed.pdf")
             with open(temp_output, "wb") as f:
                 writer.write(f)
-                
+
             # 檢查是否真的變小了
             new_size = temp_output.stat().st_size / (1024 * 1024)
             if new_size < 20:
                 self.logger.info(f"[SUCCESS] Compression successful: {new_size:.2f} MB")
-                input_path.unlink() # 刪除原檔
-                temp_output.rename(input_path) # 取代原檔
+                input_path.unlink()  # 刪除原檔
+                temp_output.rename(input_path)  # 取代原檔
                 return input_path
             else:
-                self.logger.warning(f"[WARNING] Still too large after compression ({new_size:.2f} MB), translation may fail.")
+                self.logger.warning(
+                    f"[WARNING] Still too large after compression ({new_size:.2f} MB), translation may fail."
+                )
                 temp_output.unlink()
                 return input_path
-                
+
         except Exception as e:
             self.logger.error(f"壓縮過程發生錯誤: {e}")
             return input_path
 
-    def _download_pdf(self, url: str, title: str, target_dir: Path) -> Path: # [修改] 增加 target_dir 參數
+    def _download_pdf(
+        self, url: str, title: str, target_dir: Path
+    ) -> Optional[Path]:  # [修改] 增加 target_dir 參數
         """下載單篇 PDF"""
         safe_title = re.sub(r'[\\/*?:"<>|]', "", title)[:50].strip()
         filename = f"{safe_title}.pdf"
-        file_path = target_dir / filename # [修改] 使用傳入的資料夾
+        file_path = target_dir / filename  # [修改] 使用傳入的資料夾
 
         if file_path.exists():
             if file_path.stat().st_size < 2048:
                 self.logger.warning(f"發現無效舊檔 ({filename})，刪除重試...")
                 file_path.unlink()
             else:
-                self.logger.info(f"[SKIP] PDF exists ({target_dir.name}), skipping download")
+                self.logger.info(
+                    f"[SKIP] PDF exists ({target_dir.name}), skipping download"
+                )
                 return file_path
-            
+
         self.logger.info(f"[DOWNLOADING] ({target_dir.name}): {filename}")
-        
+
         try:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             }
             response = requests.get(url, headers=headers, stream=True, timeout=60)
             response.raise_for_status()
-            
-            content_type = response.headers.get('Content-Type', '').lower()
-            if 'application/pdf' not in content_type and 'binary/octet-stream' not in content_type:
+
+            content_type = response.headers.get("Content-Type", "").lower()
+            if (
+                "application/pdf" not in content_type
+                and "binary/octet-stream" not in content_type
+            ):
                 self.logger.warning(f"下載內容非 PDF: {url}")
                 return None
 
-            with open(file_path, 'wb') as f:
+            with open(file_path, "wb") as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            
+
             if file_path.stat().st_size < 2048:
                 file_path.unlink()
                 return None
 
-            self.logger.info(f"下載完成")
-            
+            self.logger.info("下載完成")
+
             if file_path and file_path.exists():
                 self._compress_pdf(file_path)
             return file_path
@@ -208,46 +234,21 @@ class PaperDownloader:
                 file_path.unlink()
             return None
 
-    def _run_translation_script(self, pdf_path: Path, paper_metadata: Dict):
-        """Invoke Python Translator directly"""
-        zh_md_path = pdf_path.with_suffix('.zh.md')
-        if zh_md_path.exists():
-            self.logger.info(f"[SKIP] Translation exists: {zh_md_path.name}")
-            return
-            
-        # [Fix] Organize Folder First (Restore Structure)
-        try:
-            pdf_path = self.translator.organize_paper_folder(pdf_path)
-            # Update output path based on new location
-            zh_md_path = pdf_path.with_suffix('.zh.md')
-        except Exception as e:
-            self.logger.warning(f"Organization step skipped: {e}")
-
-        title = paper_metadata.get('title', 'Untitled')
-        self.logger.info(f"[TRANSLATING] Starting Native Python Translation: {title}...")
-        try:
-            self.translator.translate_paper(pdf_path, zh_md_path)
-        except QuotaExceededError:
-            self.logger.error("[ERROR] Translation Quota Exceeded! Switching to 'Download Only' mode.")
-            raise  # Re-raise to be caught in process_papers
-        except Exception as e:
-            self.logger.error(f"Translation Crash: {e}", exc_info=True)
-
     def process_papers(self, papers: List[Dict[str, Any]]):
         """主流程"""
         for paper in papers:
-            title = paper.get('title', 'Untitled')
+            title = paper.get("title", "Untitled")
             target_dir = self._determine_save_dir(paper)
             pdf_path = None
-            
+
             # 2. 下載邏輯 (傳入 target_dir)
-            pdf_info = paper.get('openAccessPdf')
-            if pdf_info and pdf_info.get('url'):
-                pdf_path = self._download_pdf(pdf_info['url'], title, target_dir)
-            
+            pdf_info = paper.get("openAccessPdf")
+            if pdf_info and pdf_info.get("url"):
+                pdf_path = self._download_pdf(pdf_info["url"], title, target_dir)
+
             if not pdf_path:
-                external_ids = paper.get('externalIds') or {}
-                arxiv_id = external_ids.get('ArXiv')
+                external_ids = paper.get("externalIds") or {}
+                arxiv_id = external_ids.get("ArXiv")
                 if arxiv_id:
                     arxiv_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
                     pdf_path = self._download_pdf(arxiv_url, title, target_dir)
@@ -255,11 +256,15 @@ class PaperDownloader:
             # 3. 翻譯邏輯 (修正參數傳遞)
             if pdf_path:
                 if self.skip_translation:
-                    self.logger.info(f"[SKIP] Skipping translation (Quota Exceeded): {title}")
+                    self.logger.info(
+                        f"[SKIP] Skipping translation (Quota Exceeded): {title}"
+                    )
                 else:
                     try:
                         # [FIXED] 這裡補上 paper 參數
                         self._run_translation_script(pdf_path, paper)
                     except QuotaExceededError:
                         self.skip_translation = True
-                        self.logger.warning("[WARNING] Global Translation Quota Hit. Disabling translation for remaining papers.")
+                        self.logger.warning(
+                            "[WARNING] Global Translation Quota Hit. Disabling translation for remaining papers."
+                        )

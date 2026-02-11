@@ -24,11 +24,12 @@
 ## 功能特色
 
 *   **智慧發現**：根據設定的關鍵字與年份範圍，自動從 Semantic Scholar 搜尋相關論文。
-*   **個人化排序**：利用向量相似度分析，根據您的閱讀歷史與偏好對論文進行排序。
+*   **個人化排序**：結合向量相似度、**時效性紅利 (Recency Bonus)** 與 **來源權重 (Venue Weighting)**，精準推薦高品質論文。
 *   **自動下載**：自動下載 Open Access 的 PDF 檔案，或嘗試透過 ArXiv 獲取。
 *   **智慧分類**：依據研究領域將論文自動分類至不同資料夾（例如 Computer Vision, NLP, Time Series）。
-*   **AI 輔助翻譯**：以 **Google Gemini**（透過 Python SDK）生成高品質的學術翻譯，涵蓋摘要與重點章節。
-*   **Obsidian 整合**：生成每日推薦筆記，並在翻譯檔案中注入相容於 Dataview 的 Metadata (YAML frontmatter)。
+*   **AI 輔助翻譯**：以 **Google Gemini** 生成高品質的學術翻譯，涵蓋摘要與重點章節。
+*   **智慧清理**：自動移除 PDF 轉檔產生的頁碼連結與格式雜訊，提供乾淨的閱讀體驗。
+*   **Obsidian 整合**：生成每日推薦筆記，並在翻譯檔案中注入相容於 Dataview 的 Metadata。
 *   **混合工作流**：支援每日自動批次處理，也保留手動翻譯單一檔案的彈性。
 
 ## 專案結構
@@ -43,8 +44,7 @@
 │   ├── translator.py       # 翻譯核心 (整合 Gemini SDK 與 Marker PDF 解析)
 │   ├── downloader.py       # PDF 下載與翻譯觸發器
 │   ├── client.py           # Semantic Scholar API 客戶端
-│   ├── harvester.py        # 使用者設定檔與歷史紀錄管理
-│   ├── ranker.py           # 論文排序邏輯
+│   ├── ranker.py           # 論文排序、使用者畫像與回饋收割
 │   └── writer.py           # Obsidian 筆記寫入器
 └── scripts/                # (舊版) PowerShell 輔助腳本
 ```
