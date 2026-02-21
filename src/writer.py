@@ -39,7 +39,7 @@ class ObsidianWriter:
         yaml_frontmatter = f"""---
         type: "daily_recommendation"
         date: "{today_str}"
-        created_time: "{datetime.now().strftime('%H:%M')}"
+        created_time: "{datetime.now().strftime("%H:%M")}"
         paper_count: {len(papers)}
         tags: [daily_rec, paper_reading]
         status: "To Read"

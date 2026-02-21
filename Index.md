@@ -7,8 +7,8 @@
 
 ## 領域分類彙整 (Fields Index)
 ```dataview
-TABLE 
-    rows.file.link as "論文名稱", 
+TABLE
+    rows.file.link as "論文名稱",
     rows.status as "狀態"
 FROM "Papers"
 WHERE field != null
@@ -19,7 +19,7 @@ GROUP BY field
 ##  每日論文推薦
 
 ```dataview
-TABLE date, paper_count, status 
-FROM #daily_rec  
+TABLE date, paper_count, status
+FROM #daily_rec
 SORT date DESC
 ```

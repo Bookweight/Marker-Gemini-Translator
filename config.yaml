@@ -29,18 +29,18 @@ search:
 
 filters:
   # 白名單：必須包含其中之一
-  whitelist_fields: 
+  whitelist_fields:
     - "Computer Science"
-  
+
   # 降權名單：若包含這些，分數 * 0.6
-  blacklist_tags: 
+  blacklist_tags:
     - "Medicine"
     - "Biology"
     - "Geology"
     - "Chemistry"
     - "Physics"
     - "Geography"
-  
+
   # 跨領域懲罰係數 (0.6 代表只保留 60% 的分數)
   cross_domain_penalty: 0.6
 

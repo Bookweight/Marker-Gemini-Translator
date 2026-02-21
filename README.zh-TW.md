@@ -7,7 +7,7 @@
 <div style="background: #e5e7eb; border-radius: 9999px; padding: 2px; width: fit-content; min-width: 180px; position: relative; display: flex; align-items: center;">
   <!-- Glider Background (Absolute - Right Aligned) -->
   <div style="position: absolute; right: 2px; top: 2px; bottom: 2px; width: calc(50% - 2px); background: #10b981; border-radius: 9999px; z-index: 1;"></div>
-  
+
   <!-- Inactive Link (English) -->
   <a href="README.md" style="flex: 1; position: relative; z-index: 2; text-align: center; text-decoration: none; padding: 6px 16px; display: block;">
     <span style="color: #4b5563; font-weight: 500; font-family: system-ui, -apple-system, sans-serif; font-size: 14px;">English</span>

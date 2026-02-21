@@ -338,7 +338,7 @@ class PaperTranslator:
                 return result["choices"][0]["message"]["content"]
             except Exception as e:
                 self.logger.warning(
-                    f"[WARNING] Groq API Attempt {attempt+1} failed: {e}"
+                    f"[WARNING] Groq API Attempt {attempt + 1} failed: {e}"
                 )
                 time.sleep(2)
         self.logger.error("[ERROR] Groq API Failed after 3 attempts.")
@@ -364,7 +364,7 @@ class PaperTranslator:
             except ResourceExhausted:
                 wait_time = base_wait * (attempt + 1)
                 self.logger.warning(
-                    f"[WARNING] Gemini Quota Exceeded (Attempt {attempt+1}). Waiting {wait_time}s..."
+                    f"[WARNING] Gemini Quota Exceeded (Attempt {attempt + 1}). Waiting {wait_time}s..."
                 )
                 time.sleep(wait_time)
 
@@ -402,7 +402,7 @@ class PaperTranslator:
                             "Gemini Quota Exceeded and Groq Fallback failed/unavailable."
                         )
                 else:
-                    self.logger.warning(f"API Error (Attempt {attempt+1}): {e}")
+                    self.logger.warning(f"API Error (Attempt {attempt + 1}): {e}")
                     time.sleep(2 * (attempt + 1))
 
         return None
